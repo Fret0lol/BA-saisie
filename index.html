@@ -332,14 +332,14 @@ const SECTIONS = [
     SEG('bipasse', 'Présence d’un bipasse', YN, { required: 1 }),
     T('bipasseObs', 'Observations sur le bipasse', { when: eq('bipasse', 'oui'), required: 1 }),
   ] },
-  { id: 's8', num: 8, title: 'Risque sanitaire avéré', fields: [
-    SEG('risque', 'Risque sanitaire avéré', YN),
-    { t: 'label', label: 'Origine', when: eq('risque', 'oui') },
-    CHK('origChoix', 'Choix non adapté (avis de mise en service)', { when: eq('risque', 'oui') }),
-    CHK('origPose', 'Pose non conforme', { when: eq('risque', 'oui') }),
-    CHK('origFonct', 'Fonctionnement non conforme', { when: eq('risque', 'oui') }),
-    CHK('origLocal', 'Local non conforme', { when: eq('risque', 'oui') }),
-    T('risqueObs', 'Observations'),
+  { id: 's8', num: 8, title: 'Risque sanitaire avéré', oneOf: { keys: ['origChoix', 'origPose', 'origFonct', 'origLocal'], when: eq('risque', 'oui'), label: 'Origine' }, fields: [
+    SEG('risque', 'Risque sanitaire avéré', YN, { required: 1 }),
+    { t: 'label', label: 'Origine (une seule case)', when: eq('risque', 'oui') },
+    CHK('origChoix', 'Choix non adapté (avis de mise en service)', { when: eq('risque', 'oui'), group: 'origine' }),
+    CHK('origPose', 'Pose non conforme', { when: eq('risque', 'oui'), group: 'origine' }),
+    CHK('origFonct', 'Fonctionnement non conforme', { when: eq('risque', 'oui'), group: 'origine' }),
+    CHK('origLocal', 'Local non conforme', { when: eq('risque', 'oui'), group: 'origine' }),
+    T('risqueObs', 'Observations', { when: eq('risque', 'oui'), required: 1 }),
   ] },
   { id: 's9', num: 9, title: 'Tests : constats avant manœuvre', intro: 'Prendre toutes les précautions avant de procéder aux tests.', fields: [
     SEG('decharge', 'Décharge', [['sans', 'Sans fuite'], ['goutte', 'Goutte à goutte'], ['legere', 'Fuite légère'], ['importante', 'Fuite importante']]),
@@ -522,8 +522,18 @@ function refreshSeg(k) {
 }
 
 function checkField(f) {
-  return h('label', { class: 'check field' }, h('input', { type: 'checkbox', name: f.k, checked: !!D()[f.k], onchange: (e) => { setVal(f.k, e.target.checked); e.target.classList.remove('invalid'); } }),
-    h('span', {}, f.label, f.required ? h('span', { class: 'req' }, ' *') : null));
+  const input = h('input', { type: 'checkbox', name: f.k, checked: !!D()[f.k],
+    onchange: (e) => {
+      setVal(f.k, e.target.checked);
+      e.target.classList.remove('invalid');
+      if (f.group && e.target.checked) { // une seule case du groupe à la fois
+        $('#form').querySelectorAll(`input[data-group="${f.group}"]`).forEach((other) => {
+          if (other !== e.target && other.checked) { other.checked = false; setVal(other.name, false); other.classList.remove('invalid'); }
+        });
+      }
+    } });
+  if (f.group) input.dataset.group = f.group;
+  return h('label', { class: 'check field' }, input, h('span', {}, f.label, f.required ? h('span', { class: 'req' }, ' *') : null));
 }
 
 function areaField(f) {
@@ -709,18 +719,23 @@ function collectRequiredFields(fields) {
 function stepMissingFields(step) {
   if (!step.section) return [];
   const d = D();
-  return collectRequiredFields(step.section.fields).filter((f) => {
+  const missing = collectRequiredFields(step.section.fields).filter((f) => {
     if (f.when && !f.when(d)) return false;
     const v = d[f.k];
     return v == null || v === '';
   });
+  const oneOf = step.section.oneOf;
+  if (oneOf && (!oneOf.when || oneOf.when(d)) && !oneOf.keys.some((k) => d[k])) missing.push({ label: oneOf.label, keys: oneOf.keys });
+  return missing;
 }
 function markMissing(fields) {
   const main = $('#form');
   let first = null;
   for (const f of fields) {
-    const el = main.querySelector(`[name="${f.k}"]`) || main.querySelector(`.seg[data-k="${f.k}"]`);
-    if (el) { el.classList.add('invalid'); if (!first) first = el; }
+    for (const k of f.keys || [f.k]) {
+      const el = main.querySelector(`[name="${k}"]`) || main.querySelector(`.seg[data-k="${k}"]`);
+      if (el) { el.classList.add('invalid'); if (!first) first = el; }
+    }
   }
   if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (first.focus) first.focus(); }
 }
