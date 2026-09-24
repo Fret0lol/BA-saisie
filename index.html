@@ -321,16 +321,16 @@ const SECTIONS = [
     CHK('infoResponsable', 'Responsable du réseau informé de l’obligation de maintenance', { when: eq('miseEnService', 'oui'), required: 1 }),
   ] },
   { id: 's6', num: 6, title: 'Conformité du local', intro: 'Selon EN 1717 : aération, accès, évacuation d’eau…', fields: [
-    SEG('localConforme', 'Local conforme', YN),
-    T('localMotif', 'Motif', { when: eq('localConforme', 'non') }),
-    SEG('immersion', 'Risque d’immersion', YN),
-    T('evacuation', 'Mode d’évacuation des eaux du local'),
+    SEG('localConforme', 'Local conforme', YN, { required: 1 }),
+    T('localMotif', 'Motif', { when: eq('localConforme', 'non'), required: 1 }),
+    SEG('immersion', 'Risque d’immersion', YN, { required: 1 }),
+    T('evacuation', 'Mode d’évacuation des eaux du local', { required: 1 }),
   ] },
   { id: 's7', num: 7, title: 'Conformité aux règles de pose', intro: 'Rupture de charge à 0,50 m mini du sol, disconnecteur entre 0,50 et 1,50 m, dégagements X1 et X2 suffisants pour la maintenance.', fields: [
-    SEG('poseConforme', 'Pose conforme', YN),
-    { t: 'area', k: 'poseMotif', label: 'Motif', when: eq('poseConforme', 'non') },
-    SEG('bipasse', 'Présence d’un bipasse', YN),
-    T('bipasseObs', 'Observations sur le bipasse', { when: eq('bipasse', 'oui') }),
+    SEG('poseConforme', 'Pose conforme', YN, { required: 1 }),
+    { t: 'area', k: 'poseMotif', label: 'Motif', when: eq('poseConforme', 'non'), required: 1 },
+    SEG('bipasse', 'Présence d’un bipasse', YN, { required: 1 }),
+    T('bipasseObs', 'Observations sur le bipasse', { when: eq('bipasse', 'oui'), required: 1 }),
   ] },
   { id: 's8', num: 8, title: 'Risque sanitaire avéré', fields: [
     SEG('risque', 'Risque sanitaire avéré', YN),
@@ -528,8 +528,8 @@ function checkField(f) {
 
 function areaField(f) {
   const id = 'f' + (idc++);
-  return h('div', { class: 'field' }, h('label', { for: id }, f.label),
-    h('textarea', { id, oninput: (e) => setVal(f.k, e.target.value) }, D()[f.k] ?? ''));
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label, f.required ? h('span', { class: 'req' }, ' *') : null),
+    h('textarea', { id, name: f.k, oninput: (e) => setVal(f.k, e.target.value) }, D()[f.k] ?? ''));
 }
 
 function sigField(f) {
