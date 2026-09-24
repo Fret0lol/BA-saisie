@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fiche disconnecteur BA</title>
+<meta name="theme-color" content="#0E5A73">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fiche BA">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face { font-family: "Atkinson"; src: url("fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson"; src: url("fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  --bg: #E9ECEA;        /* béton clair */
+  --paper: #FFFFFF;
+  --ink: #15232B;
+  --muted: #5A6A72;
+  --line: #CBD2D0;
+  --petrol: #0E5A73;    /* action principale */
+  --petrol-ink: #FFFFFF;
+  --hex: #F2C230;       /* repères de section, comme les étiquettes de chantier */
+  --hex-ink: #15232B;
+  --ok: #1E7A46; --ok-bg: #E3F2E8;
+  --ko: #B3261E; --ko-bg: #FBE7E5;
+  --field: #F6F8F7;
+  --pen: #12338C;
+  --radius: 10px;
+  --tap: 48px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111A1E; --paper: #1A262B; --ink: #E7EEEC; --muted: #9AABB1; --line: #2F3E44;
+    --petrol: #2E9CC0; --petrol-ink: #06222C; --hex: #F2C230; --hex-ink: #15232B;
+    --ok: #5CC98A; --ok-bg: #173526; --ko: #F2877E; --ko-bg: #3A1D1B; --field: #223137;
+    --pen: #12338C;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(118px + env(safe-area-inset-top, 0px)); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.45 "Atkinson", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--hex); outline-offset: 2px; }
+
+/* ---------- Barre du haut ---------- */
+.top {
+  position: sticky; top: 0; z-index: 20; background: var(--paper);
+  padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--line);
+}
+.top-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px 6px; max-width: 760px; margin: 0 auto; }
+.brand { width: 34px; height: 30px; flex: none; }
+.title { flex: 1; min-width: 0; }
+.title h1 { font-size: 17px; margin: 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title .sub { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; white-space: nowrap; overflow: hidden; }
+.title .sub > * { flex: none; }
+#ficheType { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.saved { transition: opacity .3s; }
+.offline { display: none; color: var(--ink); background: var(--hex); border-radius: 4px; padding: 0 6px; font-weight: 700; font-size: 12px; }
+body.is-offline .offline { display: inline; }
+.icon-btn { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-weight: 700; font-size: 15px; }
+
+nav.chips { display: flex; gap: 6px; overflow-x: auto; padding: 6px 16px 10px; max-width: 760px; margin: 0 auto; scrollbar-width: none; }
+nav.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-size: 14px; text-decoration: none; color: var(--ink); white-space: nowrap; }
+.chip.word { padding: 0 12px; }
+.chip .hx { width: 26px; height: 24px; font-size: 13px; }
+.chip.filled { border-color: var(--petrol); }
+.chip.filled::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--petrol); }
+
+/* Hexagone de section : reprend le repère « BA » de la fiche papier */
+.hx { display: inline-grid; place-items: center; background: var(--hex); color: var(--hex-ink); font-weight: 700;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); flex: none; }
+
+/* ---------- Contenu ---------- */
+main { max-width: 760px; margin: 0 auto; padding: 16px 12px 24px; }
+section.card { background: var(--paper); border-radius: var(--radius); padding: 18px 16px 20px; margin-bottom: 14px; border: 1px solid var(--line); }
+section.card[hidden] { display: none; }
+.card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.card-head .hx { width: 44px; height: 38px; font-size: 20px; }
+.card-head .tag { font-size: 13px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--muted); border-radius: 6px; padding: 2px 7px; }
+.card-head h2 { font-size: 20px; line-height: 1.2; margin: 0; }
+.card-intro { color: var(--muted); font-size: 14px; margin: 6px 0 4px; }
+
+.field { margin-top: 16px; }
+.field[hidden] { display: none; }
+.field > label, .field > .lab { display: block; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.field .hint { font-weight: 400; color: var(--muted); font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+
+input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], input[inputmode], textarea {
+  width: 100%; min-height: var(--tap); padding: 10px 12px; font-size: 17px;
+  border: 1.5px solid var(--line); border-radius: 8px; background: var(--field);
+}
+input[type=date] { appearance: none; -webkit-appearance: none; display: block; }
+textarea { min-height: 110px; resize: vertical; }
+input:focus, textarea:focus { border-color: var(--petrol); outline: none; background: var(--paper); }
+.prefix { display: flex; align-items: stretch; }
+.prefix span { white-space: nowrap; display: grid; place-items: center; padding: 0 10px; border: 1.5px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px; color: var(--muted); font-weight: 700; background: var(--bg); }
+.prefix input { border-radius: 0 8px 8px 0; }
+
+/* Choix segmentés */
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg button { flex: 1 1 auto; min-height: var(--tap); padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--paper); font-size: 16px; }
+.seg button[aria-checked=true] { background: var(--petrol); border-color: var(--petrol); color: var(--petrol-ink); font-weight: 700; }
+.seg.stack { flex-direction: column; }
+.seg.stack button { text-align: left; display: flex; gap: 10px; align-items: center; }
+.seg.stack button::before { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; flex: none; opacity: .6; }
+.seg.stack button[aria-checked=true]::before { background: currentColor; box-shadow: inset 0 0 0 3px var(--paper); opacity: 1; }
+.seg.stack button.good[aria-checked=true] { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+.seg.stack button.bad[aria-checked=true] { background: var(--ko-bg); border-color: var(--ko); color: var(--ko); }
+
+.check { display: flex; gap: 12px; align-items: center; min-height: var(--tap); padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 8px; margin-top: 8px; }
+.check input { width: 24px; height: 24px; accent-color: var(--petrol); flex: none; }
+.check:has(input:checked) { border-color: var(--petrol); }
+
+.btn { min-height: var(--tap); padding: 0 18px; border-radius: 8px; border: 1.5px solid var(--petrol); background: var(--paper); color: var(--petrol); font-weight: 700; font-size: 16px; }
+.btn.primary { background: var(--petrol); color: var(--petrol-ink); }
+.btn.danger { border-color: var(--ko); color: var(--ko); }
+.btn.small { min-height: 38px; font-size: 14px; padding: 0 12px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Essais */
+.essai { border-top: 1px solid var(--line); padding: 18px 0 4px; }
+.essai:first-of-type { border-top: 0; }
+.essai-head { display: flex; gap: 12px; align-items: flex-start; }
+.essai-n { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--paper); display: grid; place-items: center; font-weight: 700; flex: none; }
+.essai-g { font-weight: 700; font-size: 17px; }
+.essai-m { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+.press { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.press .prefix span { min-width: 58px; }
+.timer { margin-top: 10px; }
+.timer.run { background: var(--hex); border-color: var(--hex); color: var(--hex-ink); }
+.essai details { margin-top: 12px; }
+.essai summary { cursor: pointer; color: var(--petrol); font-weight: 700; min-height: 40px; display: flex; align-items: center; }
+.alert { margin-top: 14px; padding: 12px 14px; border-left: 4px solid var(--ko); background: var(--ko-bg); border-radius: 0 8px 8px 0; font-size: 15px; }
+.alert[hidden] { display: none; }
+.note-star { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+/* Pièces */
+.piece { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.piece .full { grid-column: 1 / -1; }
+.piece[hidden] { display: none; }
+
+/* Signature */
+.sig { position: relative; border: 1.5px dashed var(--muted); border-radius: 8px; background: #fff; height: 170px; touch-action: none; }
+.sig canvas { width: 100%; height: 100%; display: block; border-radius: 8px; }
+.sig .ph { position: absolute; inset: 0; display: grid; place-items: center; color: #8A979C; pointer-events: none; font-size: 15px; }
+.sig.has .ph { display: none; }
+.sig-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+/* Barre d'action */
+.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--paper); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.bottom-in { max-width: 760px; margin: 0 auto; display: flex; gap: 10px; }
+.bottom .btn.primary { flex: 1; font-size: 17px; min-height: 52px; }
+
+/* Feuilles modales */
+dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88vh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--paper); color: var(--ink); }
+@media (min-width: 600px) { dialog { margin: auto; border-radius: 16px; } }
+dialog::backdrop { background: rgba(10, 20, 25, .55); }
+.sheet { padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px)); }
+.sheet h3 { margin: 0 0 4px; font-size: 20px; }
+.sheet p { margin: 6px 0; color: var(--muted); }
+.sheet .stack { display: grid; gap: 10px; margin-top: 16px; }
+.sheet .btn { width: 100%; }
+.warn { color: var(--ko); background: var(--ko-bg); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 15px; }
+.fname { font-weight: 700; color: var(--ink) !important; word-break: break-all; }
+.fiche-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 10px; }
+.fiche-item.current { border-color: var(--petrol); border-width: 2px; }
+.fiche-item b { display: block; }
+.fiche-item small { color: var(--muted); }
+.fiche-list { max-height: 55vh; overflow-y: auto; }
+.toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-size: 15px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <svg class="brand" viewBox="0 0 34 30" aria-hidden="true"><polygon points="8.5,1 25.5,1 33,15 25.5,29 8.5,29 1,15" fill="var(--hex)" stroke="var(--ink)" stroke-width="1.5"/><text x="17" y="19.5" text-anchor="middle" font-size="12" font-weight="700" fill="#15232B" font-family="Atkinson, sans-serif">BA</text></svg>
+    <div class="title">
+      <h1 id="ficheTitle">Nouvelle fiche</h1>
+      <div class="sub"><span id="ficheType">Type à choisir</span><span class="offline">Hors ligne</span><span class="saved" id="saved"></span></div>
+    </div>
+    <button class="icon-btn" id="btnFiches" type="button">Mes fiches</button>
+  </div>
+  <nav class="chips" id="chips" aria-label="Sections"></nav>
+</header>
+
+<main id="form"></main>
+
+<div class="bottom"><div class="bottom-in">
+  <button class="btn primary" id="btnPdf" type="button">Générer le PDF</button>
+</div></div>
+
+<dialog id="dlgPdf"><div class="sheet">
+  <h3 id="pdfTitle">PDF prêt</h3>
+  <p class="fname" id="pdfName"></p>
+  <div id="pdfWarn"></div>
+  <div class="stack">
+    <button class="btn primary" id="btnShare" type="button">Partager ou envoyer par mail</button>
+    <button class="btn" id="btnSave" type="button">Enregistrer sur l’appareil</button>
+    <button class="btn" id="btnOpen" type="button">Ouvrir le PDF</button>
+    <button class="btn small" id="btnClosePdf" type="button">Revenir à la saisie</button>
+  </div>
+</div></dialog>
+
+<dialog id="dlgFiches"><div class="sheet">
+  <h3>Mes fiches</h3>
+  <p>Enregistrées sur ce téléphone, disponibles hors ligne.</p>
+  <div class="stack"><button class="btn primary" id="btnNew" type="button">Nouvelle fiche</button></div>
+  <div class="fiche-list" id="ficheList"></div>
+  <div class="stack"><button class="btn small" id="btnCloseFiches" type="button">Fermer</button></div>
+</div></dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="pdf-lib.min.js"></script>
+<script src="fill.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   Définition du formulaire
+   ===================================================================== */
+const YN = [['oui', 'Oui'], ['non', 'Non']];
+const T = (k, label, o = {}) => ({ t: 'text', k, label, ...o });
+const SEG = (k, label, opts, o = {}) => ({ t: 'seg', k, label, opts, ...o });
+const CHK = (k, label, o = {}) => ({ t: 'check', k, label, ...o });
+const eq = (k, v) => (d) => d[k] === v;
+
+const TYPES = { mes: 'Avis de mise en service', maint: 'Fiche de maintenance', dep: 'Fiche de dépannage' };
+// Sections à renseigner selon le type (d'après l'en-tête de la fiche)
+const SHOW = {
+  mes: null, // toutes
+  maint: (id) => !['s5', 'mesAno'].includes(id),
+  dep: (id) => ['type', 's1', 's2', 's3', 's9', 'essais', 'app', 'pieces', 'sign'].includes(id),
+};
+
+const SECTIONS = [
+  { id: 'type', chip: 'Type', title: 'Type de fiche', fields: [
+    SEG('typeFiche', 'Cette fiche est un…', [['mes', 'Avis de mise en service'], ['maint', 'Maintenance'], ['dep', 'Dépannage']], { stack: 1 }),
+    SEG('carnet', 'Fichier ou carnet sanitaire présenté', YN),
+  ] },
+  { id: 's1', num: 1, title: 'Installation et propriétaire', fields: [
+    T('adressePose', 'Adresse de pose'),
+    T('proprio', 'Propriétaire de l’installation'),
+    { t: 'row', fields: [T('proprioTel', 'Téléphone', { type: 'tel' }), T('proprioMail', 'Mail', { type: 'email' })] },
+    T('proprioAdresse', 'Adresse du propriétaire'),
+  ] },
+  { id: 's2', num: 2, title: 'Vérificateur', fields: [
+    T('verificateur', 'Vérificateur'),
+    T('competences', 'Compétences reconnues par'),
+    { t: 'row', fields: [T('certificat', 'N° de certificat'), T('certifExpiration', 'Date d’expiration', { type: 'date' })] },
+    T('entreprise', 'Entreprise'),
+    { t: 'row', fields: [T('entrepriseTel', 'Téléphone', { type: 'tel' }), T('entrepriseMail', 'Mail', { type: 'email' })] },
+    T('entrepriseAdresse', 'Adresse de l’entreprise'),
+    { t: 'action', label: 'Réutiliser mes infos pour les prochaines fiches', act: 'saveProfile', hint: 'Vérificateur, entreprise et appareillage de contrôle seront préremplis.' },
+  ] },
+  { id: 's3', num: 3, title: 'Identification du disconnecteur', fields: [
+    { t: 'row', fields: [T('marque', 'Marque'), T('typeDisc', 'Type')] },
+    { t: 'row', fields: [T('diametre', 'Diamètre'), T('serie', 'N° de série')] },
+    T('norme', 'Référence à la norme', { prefix: 'NF EN' }),
+    SEG('logoNF', 'Logo NF', YN),
+  ] },
+  { id: 's4', num: 4, title: 'Installation', fields: [
+    T('reseauProtege', 'Protège du retour d’un réseau de'),
+    T('lieuPose', 'Lieu de pose'),
+    SEG('traitement', 'Système de traitement d’eau', YN),
+    SEG('traitementPos', 'Situé', [['amont', 'En amont'], ['aval', 'En aval']], { when: eq('traitement', 'oui') }),
+    T('traitementLequel', 'Lequel', { when: eq('traitement', 'oui') }),
+    T('hauteur', 'Hauteur du point le plus élevé en aval', { hint: 'par ex. 12 m' }),
+    T('communication', 'Communication avec un réseau complémentaire', { hint: 'eau de pluie, eau industrielle…' }),
+  ] },
+  { id: 's5', num: 5, title: 'Mise en service', intro: 'Remplir aussi le cadre « Lors de la mise en service » plus bas.', fields: [
+    SEG('installType', 'Installation', [['neuve', 'Neuve'], ['renovation', 'Rénovation']]),
+    T('installateur', 'Installateur'),
+    { t: 'row', fields: [T('installateurTel', 'Téléphone', { type: 'tel' }), T('installateurMail', 'Mail', { type: 'email' })] },
+    T('installateurAdresse', 'Adresse de l’installateur'),
+    SEG('avis', 'Choix du dispositif de protection (EN 1717)', [['adapte', 'Adapté'], ['nonAdapte', 'Non adapté'], ['reserve', 'Avis réservé']]),
+    T('avisMotif', 'Motif', { when: (d) => d.avis === 'nonAdapte' || d.avis === 'reserve' }),
+    CHK('infoResponsable', 'Responsable du réseau informé de l’obligation de maintenance'),
+  ] },
+  { id: 's6', num: 6, title: 'Conformité du local', intro: 'Selon EN 1717 : aération, accès, évacuation d’eau…', fields: [
+    SEG('localConforme', 'Local conforme', YN),
+    T('localMotif', 'Motif', { when: eq('localConforme', 'non') }),
+    SEG('immersion', 'Risque d’immersion', YN),
+    T('evacuation', 'Mode d’évacuation des eaux du local'),
+  ] },
+  { id: 's7', num: 7, title: 'Conformité aux règles de pose', intro: 'Rupture de charge à 0,50 m mini du sol, disconnecteur entre 0,50 et 1,50 m, dégagements X1 et X2 suffisants pour la maintenance.', fields: [
+    SEG('poseConforme', 'Pose conforme', YN),
+    { t: 'area', k: 'poseMotif', label: 'Motif', when: eq('poseConforme', 'non') },
+    SEG('bipasse', 'Présence d’un bipasse', YN),
+    T('bipasseObs', 'Observations sur le bipasse', { when: eq('bipasse', 'oui') }),
+  ] },
+  { id: 's8', num: 8, title: 'Risque sanitaire avéré', fields: [
+    SEG('risque', 'Risque sanitaire avéré', YN),
+    { t: 'label', label: 'Origine', when: eq('risque', 'oui') },
+    CHK('origChoix', 'Choix non adapté (avis de mise en service)', { when: eq('risque', 'oui') }),
+    CHK('origPose', 'Pose non conforme', { when: eq('risque', 'oui') }),
+    CHK('origFonct', 'Fonctionnement non conforme', { when: eq('risque', 'oui') }),
+    CHK('origLocal', 'Local non conforme', { when: eq('risque', 'oui') }),
+    T('risqueObs', 'Observations'),
+  ] },
+  { id: 's9', num: 9, title: 'Tests : constats avant manœuvre', intro: 'Prendre toutes les précautions avant de procéder aux tests.', fields: [
+    SEG('decharge', 'Décharge', [['sans', 'Sans fuite'], ['goutte', 'Goutte à goutte'], ['legere', 'Fuite légère'], ['importante', 'Fuite importante']]),
+    T('autresFuites', 'Autres fuites', { hint: 'couvercle, raccords…' }),
+    SEG('v1Initial', 'Position initiale de V1', [['ouverte', 'Ouverte'], ['fermee', 'Fermée']]),
+    SEG('v2Initial', 'Position initiale de V2', [['ouverte', 'Ouverte'], ['fermee', 'Fermée']]),
+    CHK('fermerVannes', 'V1 et V2 fermées si elles ne l’étaient pas'),
+    CHK('filtreNettoye', 'Filtre démonté et nettoyé'),
+    T('etatFiltre', 'État du filtre'),
+  ] },
+  { id: 'essais', chip: 'Essais', tag: 'Verso', title: 'Essais', intro: 'Initialiser et brancher l’appareillage de contrôle. Pressions en bar.', fields: [{ t: 'essais' }] },
+  { id: 'app', chip: 'Appareillage', tag: 'Verso', title: 'Appareillage de contrôle', intro: 'Réf. NF P43-018', fields: [
+    { t: 'row', fields: [T('appMarque', 'Marque'), T('appType', 'Type / réf.')] },
+    T('appSerie', 'N° de série'),
+    T('appDate', 'Date de dernière vérification', { type: 'date' }),
+    SEG('appLogoNF', 'Logo NF', YN),
+  ] },
+  { id: 'mesAno', chip: 'Mise en service', tag: 'Verso', title: 'Lors de la mise en service', intro: 'Cocher, le cas échéant, l’anomalie.', fields: [
+    CHK('anoPression', 'Pression en amont < 1 bar mini'),
+    CHK('anoFuiteExt', 'Présence de fuite extérieure'),
+    CHK('anoFuiteDecharge', 'Présence de fuite permanente en décharge'),
+    CHK('anoDisconnexion', 'Absence de disconnexion'),
+    CHK('anoCirculation', 'Absence de circulation de l’eau'),
+    CHK('anoRupture', 'Absence de rupture de charge'),
+    CHK('anoFiltre', 'État du filtre (obstrué)'),
+    SEG('fonctionnement', 'Fonctionnement', [['correct', 'Correct'], ['incorrect', 'Incorrect']]),
+    { t: 'alert', text: 'En cas d’anomalie constatée, un contrôle de l’ensemble de protection doit être réalisé selon le § 9.', when: eq('fonctionnement', 'incorrect') },
+  ] },
+  { id: 'pieces', chip: 'Pièces', tag: 'Verso', title: 'Pièces réparées ou remplacées', intro: 'Avec le numéro de la manœuvre concernée.', fields: [{ t: 'pieces' }] },
+  { id: 'sign', chip: 'Signatures', tag: 'Verso', title: 'Signatures', fields: [
+    T('verifNom', 'Le vérificateur'),
+    T('verifDate', 'Date', { type: 'date' }),
+    { t: 'sig', k: 'sigVerif', label: 'Signature du vérificateur' },
+    T('datePrecedente', 'Date de la précédente vérification', { type: 'date' }),
+    T('respNom', 'Responsable du réseau intérieur ou son représentant'),
+    T('respDate', 'Date', { type: 'date' }),
+    { t: 'sig', k: 'sigResp', label: 'Signature du responsable', hint: 'Indispensable' },
+  ] },
+];
+
+// Essais du verso. p = pressions relevées [suffixe de clé, libellé] ; opts = résultats (le premier est le cas conforme)
+const num = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+const ESSAIS = [
+  { n: 1, g: 'Début de contrôle V1 V2', m: 'Ouvrir 10, 9, 8, 7, 6, 5, 4, 3 puis V1. Refermer 9, 10, 6 puis V1.',
+    p: [['M1', 'M1'], ['MD', 'MD'], ['M2', 'M2']],
+    opts: [['ok', 'Pas de fuite en D'], ['v1', 'Fuite permanente en D : réparer V1'], ['v2', 'Fuite permanente en D : réparer V2'], ['v1v2', 'Fuite permanente en D : réparer V1 et V2']],
+    notes: [['repV1', 'Réparation V1', (o) => o === 'v1' || o === 'v1v2'], ['repV2', 'Réparation V2', (o) => o === 'v2' || o === 'v1v2']] },
+  { n: 2, g: 'Vanne amont V1', m: 'Ouvrir 6.', p: [],
+    opts: [['ok', 'Pas d’écoulement en 6'], ['hs', 'Écoulement continu en 6 : vanne 1 HS']] },
+  { n: 3, g: 'Vanne amont V1', m: 'Fermer 6. M1 = 0.', p: [['M1', '*M1']], star: 1,
+    opts: [['ok', '*M1 reste à 0 : vanne 1 étanche'], ['hs', '*M1 > 0 : vanne 1 HS']],
+    auto: (d) => { const v = num(d.e3_M1); return v == null ? null : v === 0 ? 'ok' : 'hs'; } },
+  { n: 4, g: 'Vanne aval V2', m: 'Ouvrir 9.', p: [['M2', 'M2']],
+    opts: [['ok', 'Pas d’écoulement en 9'], ['hs', 'Écoulement continu en 9 : vanne 2 HS']] },
+  { n: 5, g: 'C1 et membrane', m: 'Ouvrir V1, 6 puis 10. Refermer 9, 10 puis 6. Fermer V1. Ouvrir 10.',
+    p: [['MD', 'MD'], ['MDs', '*MD']], star: 1,
+    opts: [['ok', '*MD ≥ 0,2 bar : obturateur C1 et membrane étanches'], ['c1', '*MD < 0,2 bar : réparer C1'], ['membrane', '*MD < 0,2 bar : réparer la membrane'], ['c1membrane', '*MD < 0,2 bar : réparer C1 et la membrane']],
+    notes: [['repC1', 'Réparation C1', (o) => o === 'c1' || o === 'c1membrane'], ['repMembrane', 'Réparation membrane', (o) => o === 'membrane' || o === 'c1membrane']],
+    auto: (d) => { const v = num(d.e5_MDs); return v != null && v >= 0.2 ? 'ok' : null; } },
+  { n: 6, g: 'Soupape', m: 'Fermer 10. Ouvrir V1. Fermer V1. Ouvrir 6.', p: [],
+    opts: [['ok', 'Disconnexion : ouverture soupape bonne'], ['hs', 'Pas de disconnexion : soupape bloquée fermée']] },
+  { n: 7, g: 'Soupape', m: 'Fermer 6. Ouvrir V1, 6, 10. Refermer 10 puis 6.', p: [['M1a', 'M1'], ['M1b', 'M1']],
+    opts: [['ok', 'Pas de fuite en D : soupape étanche'], ['hs', 'Fuite permanente en D : soupape HS']] },
+  { n: 8, g: 'Vanne aval V2', m: 'Ouvrir 9. Refermer 9. Fermer V1.', p: [['M2', 'M2'], ['M2s', '*M2']], star: 1,
+    opts: [['ok', '*M2 stable > 0 : V2 et circuit aval étanches'], ['hs', '*M2 chute à 0 (circuit aval ouvert) : vanne 2 HS']] },
+  { n: 9, g: 'C2', m: 'Ouvrir 6 lentement.', p: [['M2', 'M2'], ['M2s', '*M2']], star: 1,
+    opts: [['ok', '*M2 stable > 0 : obturateur C2 étanche'], ['hs', '*M2 chute : obturateur C2 HS']] },
+  { n: 10, g: 'Contrôle des Δp', m: '6 ouvert. Ouvrir V1, 10, 9. Refermer 10 puis 6.', p: [['MD', '*MD']], star: 1,
+    opts: [['ok', '*MD > 0,140 bar : Δp dynamique correct'], ['ko', '*MD ≤ 0,140 bar : Δp dynamique insuffisant']],
+    auto: (d) => { const v = num(d.e10_MD); return v == null ? null : v > 0.14 ? 'ok' : 'ko'; } },
+  { n: 11, g: 'Contrôle des Δp', m: 'Fermer 9. Fermer V1.', p: [['MD', '*MD']], star: 1,
+    opts: [['ok', '*MD > 0,140 bar : Δp statique correct'], ['ko', '*MD ≤ 0,140 bar : Δp statique insuffisant']],
+    auto: (d) => { const v = num(d.e11_MD); return v == null ? null : v > 0.14 ? 'ok' : 'ko'; } },
+  { n: 12, g: 'Contrôle des Δp', m: 'Ouvrir 6 très lentement.', p: [['MD', 'MD']],
+    opts: [['ok', 'Début de décharge à Δp > 0,140 bar : résultat bon'], ['ko', 'Début de décharge à Δp ≤ 0,140 bar : résultat mauvais']],
+    auto: (d) => { const v = num(d.e12_MD); return v == null ? null : v > 0.14 ? 'ok' : 'ko'; } },
+  { n: 13, g: 'Fin de contrôle', m: '6 ouvert. Ouvrir 9, 10 puis V1. Fermer 9, 10, 6.', p: [['M1', 'M1'], ['MD', 'MD'], ['M2', 'M2']],
+    opts: [['ok', 'Pas de fuite en D : fermeture soupape correcte'], ['ko', 'Fuite en D : fermeture incorrecte, reprendre les contrôles 5, 6, 7 et noter le défaut']] },
+  { n: 14, g: 'Fin de contrôle', m: 'Fermer 5, 4, 3. Fermer V1. Ouvrir 9, 10, 6. Déposer l’appareillage de contrôle et remettre l’ensemble de protection dans sa situation d’origine.', p: [], final: 1 },
+];
+
+const PROFILE_KEYS = ['verificateur', 'competences', 'certificat', 'certifExpiration', 'entreprise', 'entrepriseTel', 'entrepriseAdresse', 'entrepriseMail',
+  'appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF', 'verifNom'];
+// Données conservées quand on prépare la visite suivante d'une même installation
+const KEEP_FOR_NEXT = ['adressePose', 'proprio', 'proprioTel', 'proprioAdresse', 'proprioMail', 'marque', 'typeDisc', 'logoNF', 'diametre', 'serie', 'norme',
+  'reseauProtege', 'lieuPose', 'traitement', 'traitementPos', 'traitementLequel', 'hauteur', 'communication', 'evacuation', 'respNom'];
+
+/* =====================================================================
+   Stockage local (hors ligne)
+   ===================================================================== */
+const store = {
+  get(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { toast('Mémoire du téléphone pleine : supprimez d’anciennes fiches.'); return false; } },
+};
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+let fiches = store.get('ba.fiches', {});
+let current = null; // { id, created, updated, data }
+
+function newFiche(base = {}) {
+  const profile = store.get('ba.profile', {});
+  const f = { id: uid(), created: Date.now(), updated: Date.now(), data: { ...profile, verifDate: today(), respDate: today(), ...base } };
+  fiches[f.id] = f; persist(); return f;
+}
+function persist() { store.set('ba.fiches', fiches); if (current) store.set('ba.current', current.id); }
+let saveTimer;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    current.updated = Date.now(); fiches[current.id] = current; persist();
+    const el = document.getElementById('saved'); el.textContent = 'Enregistré'; el.style.opacity = 1;
+    setTimeout(() => (el.style.opacity = 0), 1500);
+  }, 350);
+}
+
+/* =====================================================================
+   Rendu du formulaire
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else if (k === 'class') el.className = v; else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return el;
+};
+const D = () => current.data;
+const conditional = []; // [element, when(data)]
+let idc = 0;
+
+function setVal(k, v, fromUser = true) {
+  if (v === '' || v === false || v == null) delete D()[k]; else D()[k] = v;
+  if (fromUser) { afterChange(k); scheduleSave(); }
+}
+
+function textField(f) {
+  const id = 'f' + (idc++);
+  const type = f.type || 'text';
+  const attrs = { id, type: type === 'date' ? 'date' : type, name: f.k, value: D()[f.k] ?? '', autocomplete: 'off',
+    oninput: (e) => setVal(f.k, e.target.value) };
+  if (type === 'tel') attrs.inputmode = 'tel';
+  if (f.decimal) { attrs.type = 'text'; attrs.inputmode = 'decimal'; }
+  if (type === 'email') { attrs.autocapitalize = 'off'; attrs.spellcheck = 'false'; }
+  const input = h('input', attrs);
+  const control = f.prefix ? h('div', { class: 'prefix' }, h('span', {}, f.prefix), input) : input;
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), control);
+}
+
+function segField(f) {
+  const group = h('div', { class: 'seg' + (f.stack ? ' stack' : ''), role: 'radiogroup', 'aria-label': f.label });
+  const buttons = f.opts.map(([v, lab], i) => {
+    const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(D()[f.k] === v), class: f.tone ? (i === 0 ? 'good' : 'bad') : null,
+      onclick: () => {
+        const next = D()[f.k] === v ? '' : v; // un second appui désélectionne
+        if (f.onpick) f.onpick(next);
+        setVal(f.k, next);
+      } }, lab);
+    b.dataset.v = v; return b;
+  });
+  group.append(...buttons);
+  group.dataset.k = f.k;
+  return h('div', { class: 'field' }, f.label ? h('div', { class: 'lab' }, f.label) : null, group);
+}
+function refreshSeg(k) {
+  document.querySelectorAll(`.seg[data-k="${k}"] button`).forEach((b) => b.setAttribute('aria-checked', String(D()[k] === b.dataset.v)));
+}
+
+function checkField(f) {
+  return h('label', { class: 'check field' }, h('input', { type: 'checkbox', checked: !!D()[f.k], onchange: (e) => setVal(f.k, e.target.checked) }), h('span', {}, f.label));
+}
+
+function areaField(f) {
+  const id = 'f' + (idc++);
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label),
+    h('textarea', { id, oninput: (e) => setVal(f.k, e.target.value) }, D()[f.k] ?? ''));
+}
+
+function sigField(f) {
+  const wrap = h('div', { class: 'sig' });
+  const canvas = h('canvas');
+  wrap.append(canvas, h('div', { class: 'ph' }, 'Signez ici avec le doigt'));
+  let ctx, drawing = false, dirty = false, last;
+  const setup = () => {
+    const r = wrap.getBoundingClientRect(); if (!r.width) return;
+    const dpr = Math.max(window.devicePixelRatio || 1, 2);
+    canvas.width = r.width * dpr; canvas.height = r.height * dpr;
+    ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6; ctx.strokeStyle = '#12338C';
+    if (D()[f.k]) { const img = new Image(); img.onload = () => { const s = Math.min(r.width / img.width, r.height / img.height, 1) * 0.95; const w = img.width * s, hh = img.height * s; ctx.drawImage(img, (r.width - w) / 2, (r.height - hh) / 2, w, hh); }; img.src = D()[f.k]; wrap.classList.add('has'); }
+  };
+  const pos = (e) => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  canvas.addEventListener('pointerdown', (e) => { if (!ctx) setup(); drawing = true; last = pos(e); canvas.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last[0], last[1], 1.2, 0, 7); ctx.fillStyle = '#12338C'; ctx.fill(); wrap.classList.add('has'); dirty = true; });
+  canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(...last); ctx.lineTo(...p); ctx.stroke(); last = p; });
+  const end = () => { if (!drawing) return; drawing = false; if (dirty) setVal(f.k, trimCanvas(canvas)); };
+  canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
+  const clear = () => { if (!ctx) setup(); ctx.clearRect(0, 0, canvas.width, canvas.height); wrap.classList.remove('has'); dirty = false; setVal(f.k, ''); };
+  sigSetups.push(setup);
+  return h('div', { class: 'field' }, h('div', { class: 'lab' }, f.label, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), wrap,
+    h('div', { class: 'sig-actions' }, h('button', { type: 'button', class: 'btn small', onclick: clear }, 'Effacer')));
+}
+let sigSetups = [];
+// Recadre la signature sur le tracé pour qu'elle occupe bien la case du PDF
+function trimCanvas(c) {
+  const ctx = c.getContext('2d'); const { width: w, height: hh } = c;
+  const px = ctx.getImageData(0, 0, w, hh).data;
+  let x0 = w, y0 = hh, x1 = -1, y1 = -1;
+  for (let y = 0; y < hh; y += 2) for (let x = 0; x < w; x += 2) if (px[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return '';
+  const pad = 8; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w, x1 + pad); y1 = Math.min(hh, y1 + pad);
+  const out = document.createElement('canvas'); const scale = Math.min(1, 600 / (x1 - x0));
+  out.width = (x1 - x0) * scale; out.height = (y1 - y0) * scale;
+  out.getContext('2d').drawImage(c, x0, y0, x1 - x0, y1 - y0, 0, 0, out.width, out.height);
+  return out.toDataURL('image/png');
+}
+
+function essaisBlock() {
+  const box = h('div', {}, h('p', { class: 'note-star' }, '* Attendre 3 min avant de relever la pression.'));
+  for (const e of ESSAIS) {
+    const card = h('article', { class: 'essai' });
+    card.append(h('div', { class: 'essai-head' }, h('div', { class: 'essai-n' }, String(e.n)),
+      h('div', {}, h('div', { class: 'essai-g' }, e.g), h('p', { class: 'essai-m' }, e.m))));
+    if (e.star) card.append(timerButton());
+    if (e.p.length) card.append(h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`e${e.n}_${s}`, lab, e))));
+    if (e.opts) {
+      card.append(segField({ k: `e${e.n}`, opts: e.opts, stack: 1, tone: 1, onpick: () => delete D()[`_auto_e${e.n}`] }));
+      for (const [k, lab, cond] of e.notes || []) {
+        const el = textField(T(k, lab, { hint: 'précision' })); conditional.push([el, (d) => cond(d[`e${e.n}`])]); card.append(el);
+      }
+      if (e.p.length) {
+        const det = h('details', {}, h('summary', {}, 'Pressions après réparation'), h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`r${e.n}_${s}`, lab))));
+        if (e.p.some(([s]) => D()[`r${e.n}_${s}`]) || (D()[`e${e.n}`] && D()[`e${e.n}`] !== 'ok')) det.open = true;
+        card.append(det);
+      }
+    }
+    if (e.final) {
+      card.append(segField({ k: 'v1Final', label: 'Position finale de V1', opts: [['ouverte', 'Ouverte'], ['fermee', 'Fermée']] }));
+      card.append(segField({ k: 'v2Final', label: 'Position finale de V2', opts: [['ouverte', 'Ouverte'], ['fermee', 'Fermée']] }));
+    }
+    box.append(card);
+    if (e.n === 12) {
+      const al = h('div', { class: 'alert' }, 'Un ou plusieurs Δp sont mauvais : reprendre les essais 5, 6 et 7. Si les mêmes anomalies persistent, envisager dans les meilleurs délais le remplacement du disconnecteur. Ne pas mettre de bipasse sans protection équivalente.');
+      conditional.push([al, (d) => ['e10', 'e11', 'e12'].some((k) => d[k] === 'ko')]);
+      box.append(al);
+    }
+  }
+  return box;
+}
+function pressInput(k, lab, essai) {
+  const input = h('input', { type: 'text', inputmode: 'decimal', value: D()[k] ?? '', 'aria-label': lab + ' (bar)', placeholder: 'bar',
+    oninput: (ev) => {
+      setVal(k, ev.target.value);
+      if (essai && essai.auto) { // proposition automatique du résultat tant que l'utilisateur n'a pas choisi
+        const rk = `e${essai.n}`;
+        if (!D()[rk] || D()[`_auto_${rk}`]) {
+          const s = essai.auto(D());
+          if (s) { D()[rk] = s; D()[`_auto_${rk}`] = true; } else if (D()[`_auto_${rk}`]) { delete D()[rk]; delete D()[`_auto_${rk}`]; }
+          refreshSeg(rk); afterChange(rk);
+        }
+      }
+    } });
+  return h('div', { class: 'prefix' }, h('span', {}, lab + ' ='), input);
+}
+
+let timer = null;
+function timerButton() {
+  const b = h('button', { type: 'button', class: 'btn small timer', onclick: () => startTimer(b) }, 'Minuteur 3 min');
+  return b;
+}
+function startTimer(btn) {
+  if (timer) { clearInterval(timer.iv); timer.btn.classList.remove('run'); timer.btn.textContent = 'Minuteur 3 min'; if (timer.btn === btn) { timer = null; return; } }
+  let left = 180; btn.classList.add('run');
+  const tick = () => { btn.textContent = `Relever dans ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} (toucher pour arrêter)`; };
+  tick();
+  timer = { btn, iv: setInterval(() => {
+    left--; tick();
+    if (left <= 0) {
+      clearInterval(timer.iv); timer = null; btn.classList.remove('run'); btn.textContent = 'Relever la pression maintenant';
+      try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch {}
+      beep();
+    }
+  }, 1000) };
+}
+function beep() {
+  try { const ac = new (window.AudioContext || window.webkitAudioContext)(); [0, .35].forEach((t) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(.2, ac.currentTime + t); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .2); }); } catch {}
+}
+
+function piecesBlock() {
+  const box = h('div');
+  for (let i = 1; i <= 5; i++) {
+    const row = h('div', { class: 'piece' },
+      h('div', {}, textField(T(`piece${i}`, `Pièce ${i}`))),
+      h('div', {}, textField(T(`piece${i}_n`, 'N° manœuvre', { decimal: 1 }))),
+      h('div', { class: 'full' }, textField(T(`piece${i}_obs`, 'Observations'))));
+    row.querySelectorAll('.field').forEach((f) => (f.style.marginTop = '0'));
+    if (i > 1) conditional.push([row, (d) => [`piece${i}`, `piece${i}_n`, `piece${i}_obs`, `piece${i - 1}`, `piece${i - 1}_obs`].some((k) => d[k])]);
+    box.append(row);
+  }
+  return box;
+}
+
+function renderField(f) {
+  let el;
+  switch (f.t) {
+    case 'text': el = textField(f); break;
+    case 'seg': el = segField(f); break;
+    case 'check': el = checkField(f); break;
+    case 'area': el = areaField(f); break;
+    case 'sig': el = sigField(f); break;
+    case 'row': el = h('div', { class: 'grid2' }, f.fields.map(renderField)); break;
+    case 'label': el = h('div', { class: 'field lab' }, f.label); break;
+    case 'alert': el = h('div', { class: 'alert' }, f.text); break;
+    case 'essais': el = essaisBlock(); break;
+    case 'pieces': el = piecesBlock(); break;
+    case 'action': el = h('div', { class: 'field' }, h('button', { type: 'button', class: 'btn small', onclick: () => actions[f.act]() }, f.label), f.hint ? h('p', { class: 'note-star' }, f.hint) : null); break;
+  }
+  if (f.when) conditional.push([el, f.when]);
+  return el;
+}
+
+function render() {
+  conditional.length = 0; sigSetups = []; idc = 0;
+  const main = $('#form'); main.innerHTML = '';
+  const chips = $('#chips'); chips.innerHTML = '';
+  for (const s of SECTIONS) {
+    const head = h('div', { class: 'card-head' },
+      s.num ? h('span', { class: 'hx', 'aria-hidden': 'true' }, String(s.num)) : null,
+      h('h2', {}, s.title),
+      s.tag ? h('span', { class: 'tag' }, s.tag) : null);
+    const card = h('section', { class: 'card', id: 'sec-' + s.id, 'aria-label': s.title }, head, s.intro ? h('p', { class: 'card-intro' }, s.intro) : null, s.fields.map(renderField));
+    main.append(card);
+    const chip = h('a', { class: 'chip' + (s.num ? '' : ' word'), href: '#sec-' + s.id, id: 'chip-' + s.id },
+      s.num ? h('span', { class: 'hx' }, String(s.num)) : null, s.num ? shortTitle(s) : s.chip);
+    chips.append(chip);
+  }
+  afterChange();
+  requestAnimationFrame(() => sigSetups.forEach((f) => f()));
+}
+const shortTitle = (s) => ({ s1: 'Propriétaire', s2: 'Vérificateur', s3: 'Disconnecteur', s4: 'Installation', s5: 'Mise en service', s6: 'Local', s7: 'Pose', s8: 'Risque', s9: 'Tests' })[s.id];
+
+function sectionVisible(id) { const t = D().typeFiche; return !t || !SHOW[t] || SHOW[t](id); }
+
+function afterChange(k) {
+  const d = D();
+  for (const [el, when] of conditional) el.hidden = !when(d);
+  for (const s of SECTIONS) {
+    const vis = sectionVisible(s.id);
+    $('#sec-' + s.id).hidden = !vis; $('#chip-' + s.id).hidden = !vis;
+    const keys = keysOf(s);
+    $('#chip-' + s.id).classList.toggle('filled', keys.some((kk) => d[kk] != null && d[kk] !== ''));
+  }
+  if (k === 'typeFiche' || k === 'adressePose' || k == null) updateTitle();
+}
+function updateTitle() {
+  $('#ficheTitle').textContent = D().adressePose || 'Nouvelle fiche';
+  $('#ficheType').textContent = TYPES[D().typeFiche] || 'Type à choisir';
+}
+
+// Liste des clés d'une section (pour l'export et les indicateurs)
+function keysOf(s, onlyVisible = false) {
+  const d = D(), out = [];
+  const walk = (f) => {
+    if (onlyVisible && f.when && !f.when(d)) return;
+    if (f.t === 'row') return f.fields.forEach(walk);
+    if (f.k) out.push(f.k);
+    if (f.t === 'essais') for (const e of ESSAIS) {
+      e.p.forEach(([sfx]) => out.push(`e${e.n}_${sfx}`, `r${e.n}_${sfx}`));
+      if (e.opts) out.push(`e${e.n}`);
+      (e.notes || []).forEach(([k, , cond]) => { if (!onlyVisible || cond(d[`e${e.n}`])) out.push(k); });
+      if (e.final) out.push('v1Final', 'v2Final');
+    }
+    if (f.t === 'pieces') for (let i = 1; i <= 5; i++) out.push(`piece${i}`, `piece${i}_n`, `piece${i}_obs`);
+  };
+  s.fields.forEach(walk);
+  return out;
+}
+function exportData() {
+  const d = D(), out = {};
+  for (const s of SECTIONS) {
+    if (!sectionVisible(s.id)) continue;
+    for (const k of keysOf(s, true)) if (d[k] != null && d[k] !== '') out[k] = d[k];
+  }
+  return out;
+}
+
+/* =====================================================================
+   Actions
+   ===================================================================== */
+const actions = {
+  saveProfile() {
+    const p = {}; PROFILE_KEYS.forEach((k) => { if (D()[k]) p[k] = D()[k]; });
+    if (!p.verifNom && D().verificateur) p.verifNom = D().verificateur;
+    store.set('ba.profile', p); toast('Vos infos seront préremplies sur les prochaines fiches.');
+  },
+};
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2600); }
+
+function openFiche(id) { current = fiches[id]; persist(); render(); window.scrollTo(0, 0); }
+
+function listFiches() {
+  const list = $('#ficheList'); list.innerHTML = '';
+  const arr = Object.values(fiches).sort((a, b) => b.updated - a.updated);
+  if (!arr.length) list.append(h('p', {}, 'Aucune fiche pour l’instant.'));
+  for (const f of arr) {
+    const d = f.data;
+    const when = new Date(f.updated).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    list.append(h('div', { class: 'fiche-item' + (f.id === current.id ? ' current' : '') },
+      h('b', {}, d.adressePose || 'Sans adresse de pose'),
+      h('small', {}, `${TYPES[d.typeFiche] || 'Type non choisi'}, modifiée le ${when}`),
+      h('div', { class: 'row-actions' },
+        f.id === current.id ? null : h('button', { type: 'button', class: 'btn small primary', onclick: () => { openFiche(f.id); $('#dlgFiches').close(); } }, 'Ouvrir'),
+        h('button', { type: 'button', class: 'btn small', onclick: () => {
+          const base = {}; KEEP_FOR_NEXT.forEach((k) => { if (d[k]) base[k] = d[k]; });
+          if (d.verifDate) base.datePrecedente = d.verifDate;
+          base.typeFiche = 'maint';
+          const nf = newFiche(base); openFiche(nf.id); $('#dlgFiches').close(); toast('Nouvelle visite préparée avec les données de l’installation.');
+        } }, 'Visite suivante'),
+        h('button', { type: 'button', class: 'btn small danger', onclick: () => {
+          if (!confirm('Supprimer définitivement cette fiche ?')) return;
+          delete fiches[f.id];
+          if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); render(); }
+          persist(); listFiches();
+        } }, 'Supprimer'))));
+  }
+}
+
+/* ---------- Génération et export du PDF ---------- */
+let template = null, pdfFile = null, pdfUrl = null;
+async function getTemplate() {
+  if (!template) { const r = await fetch('BA.pdf'); if (!r.ok) throw new Error('Modèle PDF introuvable'); template = await r.arrayBuffer(); }
+  return template;
+}
+const slug = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+
+async function generate() {
+  const btn = $('#btnPdf'); btn.disabled = true; btn.textContent = 'Génération…';
+  try {
+    const bytes = await BAFill.fillBA(PDFLib, await getTemplate(), exportData());
+    const d = D();
+    const typ = { mes: 'MiseEnService', maint: 'Maintenance', dep: 'Depannage' }[d.typeFiche] || 'Fiche';
+    const name = ['BA', typ, slug(d.adressePose), (d.verifDate || today())].filter(Boolean).join('_') + '.pdf';
+    pdfFile = new File([bytes], name, { type: 'application/pdf' });
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    pdfUrl = URL.createObjectURL(pdfFile);
+    $('#pdfName').textContent = name;
+    const warn = [];
+    if (!d.typeFiche) warn.push('Le type de fiche n’est pas coché.');
+    if (!d.sigResp) warn.push('La signature du responsable du réseau intérieur manque : elle est indispensable.');
+    if (!d.sigVerif) warn.push('La signature du vérificateur manque.');
+    $('#pdfWarn').innerHTML = ''; warn.forEach((w) => $('#pdfWarn').append(h('div', { class: 'warn' }, w)));
+    const canShare = navigator.canShare && navigator.canShare({ files: [pdfFile] });
+    $('#btnShare').hidden = !canShare;
+    $('#btnSave').classList.toggle('primary', !canShare);
+    $('#dlgPdf').showModal();
+  } catch (e) {
+    console.error(e); toast('Échec de la génération : ' + e.message);
+  } finally { btn.disabled = false; btn.textContent = 'Générer le PDF'; }
+}
+async function share() {
+  try {
+    await navigator.share({ files: [pdfFile], title: pdfFile.name, text: 'Fiche disconnecteur BA : ' + (D().adressePose || '') });
+  } catch (e) { if (e.name !== 'AbortError') { toast('Partage impossible, enregistrement du fichier.'); download(); } }
+}
+function download() {
+  const a = h('a', { href: pdfUrl, download: pdfFile.name }); document.body.append(a); a.click(); a.remove();
+}
+
+/* =====================================================================
+   Démarrage
+   ===================================================================== */
+$('#btnPdf').addEventListener('click', generate);
+$('#btnShare').addEventListener('click', share);
+$('#btnSave').addEventListener('click', download);
+$('#btnOpen').addEventListener('click', () => window.open(pdfUrl, '_blank'));
+$('#btnClosePdf').addEventListener('click', () => $('#dlgPdf').close());
+$('#btnFiches').addEventListener('click', () => { listFiches(); $('#dlgFiches').showModal(); });
+$('#btnCloseFiches').addEventListener('click', () => $('#dlgFiches').close());
+$('#btnNew').addEventListener('click', () => { const f = newFiche(); openFiche(f.id); $('#dlgFiches').close(); });
+document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
+
+const syncOnline = () => document.body.classList.toggle('is-offline', !navigator.onLine);
+addEventListener('online', syncOnline); addEventListener('offline', syncOnline); syncOnline();
+let rw; addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => sigSetups.forEach((f) => f()), 200); });
+
+const lastId = store.get('ba.current', null);
+current = fiches[lastId] || Object.values(fiches).sort((a, b) => b.updated - a.updated)[0] || newFiche();
+render();
+
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker', e));
+}
+getTemplate().catch(() => {}); // met le modèle en mémoire dès l'ouverture
+</script>
+</body>
+</html>
