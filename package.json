@@ -1,0 +1,13 @@
+{
+  "name": "ba-saisie-dev",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Outillage de développement pour la fiche BA (l'application elle-même ne nécessite pas npm).",
+  "scripts": {
+    "dev": "node scripts/dev-server.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
