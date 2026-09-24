@@ -99,6 +99,9 @@ section.card[hidden] { display: none; }
 .field { margin-top: 16px; }
 .field[hidden] { display: none; }
 .field > label, .field > .lab { display: block; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.req { color: var(--ko); }
+input.invalid, textarea.invalid { border-color: var(--ko); }
+.seg.invalid { outline: 2px solid var(--ko); outline-offset: 3px; border-radius: 8px; }
 .field .hint { font-weight: 400; color: var(--muted); font-size: 13px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
@@ -273,14 +276,14 @@ const SHOW = {
 
 const SECTIONS = [
   { id: 'type', chip: 'Type', title: 'Type de fiche', fields: [
-    SEG('typeFiche', 'Cette fiche est un…', [['mes', 'Avis de mise en service'], ['maint', 'Maintenance'], ['dep', 'Dépannage']], { stack: 1 }),
-    SEG('carnet', 'Fichier ou carnet sanitaire présenté', YN),
+    SEG('typeFiche', 'Cette fiche est un…', [['mes', 'Avis de mise en service'], ['maint', 'Maintenance'], ['dep', 'Dépannage']], { stack: 1, required: 1 }),
+    SEG('carnet', 'Fichier ou carnet sanitaire présenté', YN, { required: 1 }),
   ] },
   { id: 's1', num: 1, title: 'Installation et propriétaire', fields: [
-    T('adressePose', 'Adresse de pose'),
-    T('proprio', 'Propriétaire de l’installation'),
-    { t: 'row', fields: [T('proprioTel', 'Téléphone', { type: 'tel' }), T('proprioMail', 'Mail', { type: 'email' })] },
-    T('proprioAdresse', 'Adresse du propriétaire'),
+    T('adressePose', 'Adresse de pose', { required: 1 }),
+    T('proprio', 'Propriétaire de l’installation', { required: 1 }),
+    { t: 'row', fields: [T('proprioTel', 'Téléphone', { type: 'tel', required: 1 }), T('proprioMail', 'Mail', { type: 'email', required: 1 })] },
+    T('proprioAdresse', 'Adresse du propriétaire', { required: 1 }),
   ] },
   { id: 's2', num: 2, title: 'Vérificateur', fields: [
     T('verificateur', 'Vérificateur'),
@@ -492,7 +495,7 @@ function textField(f) {
   if (type === 'email') { attrs.autocapitalize = 'off'; attrs.spellcheck = 'false'; }
   const input = h('input', attrs);
   const control = f.prefix ? h('div', { class: 'prefix' }, h('span', {}, f.prefix), input) : input;
-  return h('div', { class: 'field' }, h('label', { for: id }, f.label, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), control);
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label, f.required ? h('span', { class: 'req' }, ' *') : null, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), control);
 }
 
 function segField(f) {
@@ -504,12 +507,13 @@ function segField(f) {
         if (f.onpick) f.onpick(next);
         setVal(f.k, next);
         refreshSeg(f.k);
+        group.classList.remove('invalid');
       } }, lab);
     b.dataset.v = v; return b;
   });
   group.append(...buttons);
   group.dataset.k = f.k;
-  return h('div', { class: 'field' }, f.label ? h('div', { class: 'lab' }, f.label) : null, group);
+  return h('div', { class: 'field' }, f.label ? h('div', { class: 'lab' }, f.label, f.required ? h('span', { class: 'req' }, ' *') : null) : null, group);
 }
 function refreshSeg(k) {
   document.querySelectorAll(`.seg[data-k="${k}"] button`).forEach((b) => b.setAttribute('aria-checked', String(D()[k] === b.dataset.v)));
@@ -690,10 +694,38 @@ function enterFiche() {
   stepIndex = idx === -1 ? 0 : idx;
   renderStep();
 }
+// Champs obligatoires : bloquent le passage à l'étape suivante (pas de saisie forcée en arrière)
+function collectRequiredFields(fields) {
+  let out = [];
+  for (const f of fields) {
+    if (f.t === 'row') { out = out.concat(collectRequiredFields(f.fields)); continue; }
+    if (f.required && f.k) out.push(f);
+  }
+  return out;
+}
+function stepMissingFields(step) {
+  if (!step.section) return [];
+  const d = D();
+  return collectRequiredFields(step.section.fields).filter((f) => {
+    if (f.when && !f.when(d)) return false;
+    const v = d[f.k];
+    return v == null || v === '';
+  });
+}
+function markMissing(fields) {
+  const main = $('#form');
+  let first = null;
+  for (const f of fields) {
+    const el = main.querySelector(`[name="${f.k}"]`) || main.querySelector(`.seg[data-k="${f.k}"]`);
+    if (el) { el.classList.add('invalid'); if (!first) first = el; }
+  }
+  if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (first.focus) first.focus(); }
+}
 function goNext() {
   const step = steps[stepIndex];
   if (!step) return;
-  if (step.id === 'type' && !D().typeFiche) { toast('Choisissez le type de fiche pour continuer.'); return; }
+  const missing = stepMissingFields(step);
+  if (missing.length) { markMissing(missing); toast('À compléter : ' + missing.map((f) => f.label).join(', ')); return; }
   const visited = D()._visited || (D()._visited = {});
   visited[step.id] = true;
   if (stepIndex < steps.length - 1) stepIndex++;
@@ -994,6 +1026,7 @@ $('#btnProfile').addEventListener('click', openProfile);
 $('#btnSaveProfile').addEventListener('click', saveProfileDraft);
 $('#btnCloseProfile').addEventListener('click', () => $('#dlgProfile').close());
 document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
+$('#form').addEventListener('input', (e) => e.target.classList.remove('invalid'));
 
 const syncOnline = () => document.body.classList.toggle('is-offline', !navigator.onLine);
 addEventListener('online', syncOnline); addEventListener('offline', syncOnline); syncOnline();
