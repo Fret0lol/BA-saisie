@@ -230,9 +230,22 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
 <dialog id="dlgFiches"><div class="sheet">
   <h3>Mes fiches</h3>
   <p>Enregistrées sur ce téléphone, disponibles hors ligne.</p>
-  <div class="stack"><button class="btn primary" id="btnNew" type="button">Nouvelle fiche</button></div>
+  <div class="stack">
+    <button class="btn primary" id="btnNew" type="button">Nouvelle fiche</button>
+    <button class="btn" id="btnProfile" type="button">Mes informations (vérificateur)</button>
+  </div>
   <div class="fiche-list" id="ficheList"></div>
   <div class="stack"><button class="btn small" id="btnCloseFiches" type="button">Fermer</button></div>
+</div></dialog>
+
+<dialog id="dlgProfile"><div class="sheet">
+  <h3>Mes informations</h3>
+  <p>Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, appareillage de contrôle).</p>
+  <div id="profileForm"></div>
+  <div class="stack">
+    <button class="btn primary" id="btnSaveProfile" type="button">Enregistrer</button>
+    <button class="btn small" id="btnCloseProfile" type="button">Fermer sans enregistrer</button>
+  </div>
 </div></dialog>
 
 <div class="toast" id="toast" role="status"></div>
@@ -868,6 +881,33 @@ const actions = {
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2600); }
 
+/* ---------- Mes informations (profil vérificateur), modifiable sans ouvrir de fiche ---------- */
+let profileDraft = {};
+function profileField(f) {
+  if (f.t === 'seg') {
+    const group = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': f.label });
+    group.append(...f.opts.map(([v, lab]) => {
+      const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(profileDraft[f.k] === v),
+        onclick: () => { profileDraft[f.k] = profileDraft[f.k] === v ? '' : v; renderProfileForm(); } }, lab);
+      b.dataset.v = v; return b;
+    }));
+    return h('div', { class: 'field' }, h('div', { class: 'lab' }, f.label), group);
+  }
+  const id = 'pf-' + f.k;
+  const input = h('input', { id, type: f.type === 'date' ? 'date' : (f.type || 'text'), value: profileDraft[f.k] ?? '', autocomplete: 'off',
+    oninput: (e) => { profileDraft[f.k] = e.target.value; } });
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label), input);
+}
+function renderProfileForm() {
+  const box = $('#profileForm'); box.innerHTML = '';
+  for (const k of PROFILE_KEYS) { const f = FIELD_META[k]; if (f) box.append(profileField(f)); }
+}
+function openProfile() { profileDraft = { ...store.get('ba.profile', {}) }; renderProfileForm(); $('#dlgProfile').showModal(); }
+function saveProfileDraft() {
+  const p = {}; PROFILE_KEYS.forEach((k) => { if (profileDraft[k]) p[k] = profileDraft[k]; });
+  store.set('ba.profile', p); toast('Informations enregistrées pour vos prochaines fiches.'); $('#dlgProfile').close();
+}
+
 function openFiche(id) { current = fiches[id]; persist(); enterFiche(); }
 
 function listFiches() {
@@ -950,6 +990,9 @@ $('#btnClosePdf').addEventListener('click', () => $('#dlgPdf').close());
 $('#btnFiches').addEventListener('click', () => { listFiches(); $('#dlgFiches').showModal(); });
 $('#btnCloseFiches').addEventListener('click', () => $('#dlgFiches').close());
 $('#btnNew').addEventListener('click', () => { const f = newFiche(); openFiche(f.id); $('#dlgFiches').close(); });
+$('#btnProfile').addEventListener('click', openProfile);
+$('#btnSaveProfile').addEventListener('click', saveProfileDraft);
+$('#btnCloseProfile').addEventListener('click', () => $('#dlgProfile').close());
 document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
 
 const syncOnline = () => document.body.classList.toggle('is-offline', !navigator.onLine);
