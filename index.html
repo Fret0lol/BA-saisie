@@ -792,8 +792,9 @@ function renderChips() {
 function renderBottomBar(step) {
   const bar = $('#bottomBar'); bar.innerHTML = '';
   if (stepIndex > 0) bar.append(h('button', { class: 'btn', type: 'button', onclick: goPrev }, 'Précédent'));
+  if (!step.recap) bar.append(h('button', { class: 'btn', type: 'button', 'aria-label': 'Aperçu du PDF rempli', onclick: (e) => generate(e.currentTarget) }, 'Aperçu'));
   bar.append(step.recap
-    ? h('button', { id: 'btnPdf', class: 'btn primary', type: 'button', onclick: generate }, 'Générer le PDF')
+    ? h('button', { class: 'btn primary', type: 'button', onclick: (e) => generate(e.currentTarget) }, 'Générer le PDF')
     : h('button', { class: 'btn primary', type: 'button', onclick: goNext }, 'Suivant'));
 }
 function renderStep() {
@@ -904,8 +905,8 @@ async function getTemplate() {
 }
 const slug = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
-async function generate() {
-  const btn = $('#btnPdf'); btn.disabled = true; btn.textContent = 'Génération…';
+async function generate(btn) {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Génération…';
   try {
     const bytes = await BAFill.fillBA(PDFLib, await getTemplate(), exportData());
     const d = D();
@@ -926,7 +927,7 @@ async function generate() {
     $('#dlgPdf').showModal();
   } catch (e) {
     console.error(e); toast('Échec de la génération : ' + e.message);
-  } finally { btn.disabled = false; btn.textContent = 'Générer le PDF'; }
+  } finally { btn.disabled = false; btn.textContent = label; }
 }
 async function share() {
   try {
