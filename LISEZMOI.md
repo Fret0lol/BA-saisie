@@ -9,6 +9,21 @@ le contenu de ce dossier sur n'importe quel hébergement statique, par exemple :
 - Netlify Drop (app.netlify.com/drop) : glisser-déposer le dossier ;
 - GitHub Pages, OVH, o2switch, ou le serveur web de l'entreprise.
 
+### Déploiement automatique via GitHub Pages
+Un workflow GitHub Actions (`.github/workflows/deploy.yml`) publie automatiquement le site
+à chaque `push` sur `main`. Il exclut les fichiers réservés au développement
+(`package.json`, `scripts/`, `tests/`…) listés dans `.github/pages-exclude.txt`.
+
+À faire une seule fois, dans les réglages du dépôt GitHub :
+1. **Settings > Pages > Build and deployment > Source** : choisir **GitHub Actions**
+   (pas « Deploy from a branch »).
+2. Pousser un commit sur `main` (ou lancer le workflow manuellement depuis l'onglet
+   **Actions > Déploiement GitHub Pages > Run workflow**).
+3. L'adresse du site apparaît dans **Settings > Pages** une fois le déploiement terminé
+   (généralement `https://<utilisateur>.github.io/<dépôt>/`).
+
+Ensuite, chaque `push` sur `main` republie automatiquement le site à jour.
+
 ## Installation sur les téléphones
 1. Ouvrir l'adresse une première fois avec une connexion (tout est alors mis en cache).
 2. iPhone : Safari > Partager > « Sur l'écran d'accueil ». Android : Chrome > menu > « Installer l'application ».
