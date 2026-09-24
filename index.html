@@ -490,6 +490,7 @@ function segField(f) {
         const next = D()[f.k] === v ? '' : v; // un second appui désélectionne
         if (f.onpick) f.onpick(next);
         setVal(f.k, next);
+        refreshSeg(f.k);
       } }, lab);
     b.dataset.v = v; return b;
   });
