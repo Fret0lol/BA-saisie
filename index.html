@@ -285,13 +285,13 @@ const SECTIONS = [
     { t: 'row', fields: [T('proprioTel', 'Téléphone', { type: 'tel', required: 1 }), T('proprioMail', 'Mail', { type: 'email', required: 1 })] },
     T('proprioAdresse', 'Adresse du propriétaire', { required: 1 }),
   ] },
-  { id: 's2', num: 2, title: 'Vérificateur', fields: [
-    T('verificateur', 'Vérificateur'),
-    T('competences', 'Compétences reconnues par'),
-    { t: 'row', fields: [T('certificat', 'N° de certificat'), T('certifExpiration', 'Date d’expiration', { type: 'date' })] },
-    T('entreprise', 'Entreprise'),
-    { t: 'row', fields: [T('entrepriseTel', 'Téléphone', { type: 'tel' }), T('entrepriseMail', 'Mail', { type: 'email' })] },
-    T('entrepriseAdresse', 'Adresse de l’entreprise'),
+  { id: 's2', num: 2, title: 'Vérificateur', autoSkip: 1, fields: [
+    T('verificateur', 'Vérificateur', { required: 1 }),
+    T('competences', 'Compétences reconnues par', { required: 1 }),
+    { t: 'row', fields: [T('certificat', 'N° de certificat', { required: 1 }), T('certifExpiration', 'Date d’expiration', { type: 'date', required: 1 })] },
+    T('entreprise', 'Entreprise', { required: 1 }),
+    { t: 'row', fields: [T('entrepriseTel', 'Téléphone', { type: 'tel', required: 1 }), T('entrepriseMail', 'Mail', { type: 'email', required: 1 })] },
+    T('entrepriseAdresse', 'Adresse de l’entreprise', { required: 1 }),
     { t: 'action', label: 'Réutiliser mes infos pour les prochaines fiches', act: 'saveProfile', hint: 'Vérificateur, entreprise et appareillage de contrôle seront préremplis.' },
   ] },
   { id: 's3', num: 3, title: 'Identification du disconnecteur', fields: [
@@ -721,6 +721,15 @@ function markMissing(fields) {
   }
   if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (first.focus) first.focus(); }
 }
+// Étape déjà entièrement préremplie (ex. profil vérificateur) : on la saute en avançant
+function autoSkipForward() {
+  while (stepIndex < steps.length - 1) {
+    const step = steps[stepIndex];
+    if (!step.section || !step.section.autoSkip || stepMissingFields(step).length) break;
+    (D()._visited || (D()._visited = {}))[step.id] = true;
+    stepIndex++;
+  }
+}
 function goNext() {
   const step = steps[stepIndex];
   if (!step) return;
@@ -729,6 +738,7 @@ function goNext() {
   const visited = D()._visited || (D()._visited = {});
   visited[step.id] = true;
   if (stepIndex < steps.length - 1) stepIndex++;
+  autoSkipForward();
   scheduleSave();
   renderStep();
 }
