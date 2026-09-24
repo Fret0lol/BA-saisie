@@ -78,6 +78,9 @@ nav.chips::-webkit-scrollbar { display: none; }
 .chip .hx { width: 26px; height: 24px; font-size: 13px; }
 .chip.filled { border-color: var(--petrol); }
 .chip.filled::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--petrol); }
+.chip.current { box-shadow: 0 0 0 2px var(--petrol) inset; font-weight: 700; }
+.chip:disabled { opacity: .4; }
+#stepCounter { color: var(--muted); }
 
 /* Hexagone de section : reprend le repère « BA » de la fiche papier */
 .hx { display: inline-grid; place-items: center; background: var(--hex); color: var(--hex-ink); font-weight: 700;
@@ -149,6 +152,13 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .alert[hidden] { display: none; }
 .note-star { font-size: 14px; color: var(--muted); margin-top: 6px; }
 
+/* Récapitulatif */
+.recap-card .card-head h2 { flex: 1; }
+.recap-list { margin: 10px 0 0; }
+.recap-list dt { font-weight: 700; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.recap-list dt:first-child { margin-top: 0; }
+.recap-list dd { margin: 0 0 0; font-size: 15px; }
+
 /* Pièces */
 .piece { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
 .piece .full { grid-column: 1 / -1; }
@@ -194,18 +204,16 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
     <svg class="brand" viewBox="0 0 34 30" aria-hidden="true"><polygon points="8.5,1 25.5,1 33,15 25.5,29 8.5,29 1,15" fill="var(--hex)" stroke="var(--ink)" stroke-width="1.5"/><text x="17" y="19.5" text-anchor="middle" font-size="12" font-weight="700" fill="#15232B" font-family="Atkinson, sans-serif">BA</text></svg>
     <div class="title">
       <h1 id="ficheTitle">Nouvelle fiche</h1>
-      <div class="sub"><span id="ficheType">Type à choisir</span><span class="offline">Hors ligne</span><span class="saved" id="saved"></span></div>
+      <div class="sub"><span id="ficheType">Type à choisir</span><span id="stepCounter"></span><span class="offline">Hors ligne</span><span class="saved" id="saved"></span></div>
     </div>
     <button class="icon-btn" id="btnFiches" type="button">Mes fiches</button>
   </div>
-  <nav class="chips" id="chips" aria-label="Sections"></nav>
+  <nav class="chips" id="chips" aria-label="Étapes"></nav>
 </header>
 
 <main id="form"></main>
 
-<div class="bottom"><div class="bottom-in">
-  <button class="btn primary" id="btnPdf" type="button">Générer le PDF</button>
-</div></div>
+<div class="bottom"><div class="bottom-in" id="bottomBar"></div></div>
 
 <dialog id="dlgPdf"><div class="sheet">
   <h3 id="pdfTitle">PDF prêt</h3>
@@ -395,6 +403,15 @@ const ESSAIS = [
   { n: 14, g: 'Fin de contrôle', m: 'Fermer 5, 4, 3. Fermer V1. Ouvrir 9, 10, 6. Déposer l’appareillage de contrôle et remettre l’ensemble de protection dans sa situation d’origine.', p: [], final: 1 },
 ];
 
+// Index clé -> définition de champ (label, type…), pour le récapitulatif
+const FIELD_META = {};
+(function indexFields(fields) {
+  for (const f of fields) {
+    if (f.t === 'row') { indexFields(f.fields); continue; }
+    if (f.k) FIELD_META[f.k] = f;
+  }
+})(SECTIONS.flatMap((s) => s.fields));
+
 const PROFILE_KEYS = ['verificateur', 'competences', 'certificat', 'certifExpiration', 'entreprise', 'entrepriseTel', 'entrepriseAdresse', 'entrepriseMail',
   'appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF', 'verifNom'];
 // Données conservées quand on prépare la visite suivante d'une même installation
@@ -532,37 +549,29 @@ function trimCanvas(c) {
   return out.toDataURL('image/png');
 }
 
-function essaisBlock() {
-  const box = h('div', {}, h('p', { class: 'note-star' }, '* Attendre 3 min avant de relever la pression.'));
-  for (const e of ESSAIS) {
-    const card = h('article', { class: 'essai' });
-    card.append(h('div', { class: 'essai-head' }, h('div', { class: 'essai-n' }, String(e.n)),
-      h('div', {}, h('div', { class: 'essai-g' }, e.g), h('p', { class: 'essai-m' }, e.m))));
-    if (e.star) card.append(timerButton());
-    if (e.p.length) card.append(h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`e${e.n}_${s}`, lab, e))));
-    if (e.opts) {
-      card.append(segField({ k: `e${e.n}`, opts: e.opts, stack: 1, tone: 1, onpick: () => delete D()[`_auto_e${e.n}`] }));
-      for (const [k, lab, cond] of e.notes || []) {
-        const el = textField(T(k, lab, { hint: 'précision' })); conditional.push([el, (d) => cond(d[`e${e.n}`])]); card.append(el);
-      }
-      if (e.p.length) {
-        const det = h('details', {}, h('summary', {}, 'Pressions après réparation'), h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`r${e.n}_${s}`, lab))));
-        if (e.p.some(([s]) => D()[`r${e.n}_${s}`]) || (D()[`e${e.n}`] && D()[`e${e.n}`] !== 'ok')) det.open = true;
-        card.append(det);
-      }
+// Un essai = une étape du parcours (carte autonome)
+function essaiCard(e) {
+  const card = h('article', { class: 'essai' });
+  card.append(h('div', { class: 'essai-head' }, h('div', { class: 'essai-n' }, String(e.n)),
+    h('div', {}, h('div', { class: 'essai-g' }, e.g), h('p', { class: 'essai-m' }, e.m))));
+  if (e.star) card.append(h('p', { class: 'note-star' }, '* Attendre 3 min avant de relever la pression.'), timerButton());
+  if (e.p.length) card.append(h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`e${e.n}_${s}`, lab, e))));
+  if (e.opts) {
+    card.append(segField({ k: `e${e.n}`, opts: e.opts, stack: 1, tone: 1, onpick: () => delete D()[`_auto_e${e.n}`] }));
+    for (const [k, lab, cond] of e.notes || []) {
+      const el = textField(T(k, lab, { hint: 'précision' })); conditional.push([el, (d) => cond(d[`e${e.n}`])]); card.append(el);
     }
-    if (e.final) {
-      card.append(segField({ k: 'v1Final', label: 'Position finale de V1', opts: [['ouverte', 'Ouverte'], ['fermee', 'Fermée']] }));
-      card.append(segField({ k: 'v2Final', label: 'Position finale de V2', opts: [['ouverte', 'Ouverte'], ['fermee', 'Fermée']] }));
-    }
-    box.append(card);
-    if (e.n === 12) {
-      const al = h('div', { class: 'alert' }, 'Un ou plusieurs Δp sont mauvais : reprendre les essais 5, 6 et 7. Si les mêmes anomalies persistent, envisager dans les meilleurs délais le remplacement du disconnecteur. Ne pas mettre de bipasse sans protection équivalente.');
-      conditional.push([al, (d) => ['e10', 'e11', 'e12'].some((k) => d[k] === 'ko')]);
-      box.append(al);
+    if (e.p.length) {
+      const det = h('details', {}, h('summary', {}, 'Pressions après réparation'), h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`r${e.n}_${s}`, lab))));
+      if (e.p.some(([s]) => D()[`r${e.n}_${s}`]) || (D()[`e${e.n}`] && D()[`e${e.n}`] !== 'ok')) det.open = true;
+      card.append(det);
     }
   }
-  return box;
+  if (e.final) {
+    card.append(segField({ k: 'v1Final', label: 'Position finale de V1', opts: [['ouverte', 'Ouverte'], ['fermee', 'Fermée']] }));
+    card.append(segField({ k: 'v2Final', label: 'Position finale de V2', opts: [['ouverte', 'Ouverte'], ['fermee', 'Fermée']] }));
+  }
+  return card;
 }
 function pressInput(k, lab, essai) {
   const input = h('input', { type: 'text', inputmode: 'decimal', value: D()[k] ?? '', 'aria-label': lab + ' (bar)', placeholder: 'bar',
@@ -628,7 +637,6 @@ function renderField(f) {
     case 'row': el = h('div', { class: 'grid2' }, f.fields.map(renderField)); break;
     case 'label': el = h('div', { class: 'field lab' }, f.label); break;
     case 'alert': el = h('div', { class: 'alert' }, f.text); break;
-    case 'essais': el = essaisBlock(); break;
     case 'pieces': el = piecesBlock(); break;
     case 'action': el = h('div', { class: 'field' }, h('button', { type: 'button', class: 'btn small', onclick: () => actions[f.act]() }, f.label), f.hint ? h('p', { class: 'note-star' }, f.hint) : null); break;
   }
@@ -636,38 +644,179 @@ function renderField(f) {
   return el;
 }
 
-function render() {
-  conditional.length = 0; sigSetups = []; idc = 0;
-  const main = $('#form'); main.innerHTML = '';
-  const chips = $('#chips'); chips.innerHTML = '';
-  for (const s of SECTIONS) {
-    const head = h('div', { class: 'card-head' },
-      s.num ? h('span', { class: 'hx', 'aria-hidden': 'true' }, String(s.num)) : null,
-      h('h2', {}, s.title),
-      s.tag ? h('span', { class: 'tag' }, s.tag) : null);
-    const card = h('section', { class: 'card', id: 'sec-' + s.id, 'aria-label': s.title }, head, s.intro ? h('p', { class: 'card-intro' }, s.intro) : null, s.fields.map(renderField));
-    main.append(card);
-    const chip = h('a', { class: 'chip' + (s.num ? '' : ' word'), href: '#sec-' + s.id, id: 'chip-' + s.id },
-      s.num ? h('span', { class: 'hx' }, String(s.num)) : null, s.num ? shortTitle(s) : s.chip);
-    chips.append(chip);
-  }
-  afterChange();
-  requestAnimationFrame(() => sigSetups.forEach((f) => f()));
-}
 const shortTitle = (s) => ({ s1: 'Propriétaire', s2: 'Vérificateur', s3: 'Disconnecteur', s4: 'Installation', s5: 'Mise en service', s6: 'Local', s7: 'Pose', s8: 'Risque', s9: 'Tests' })[s.id];
 
 function sectionVisible(id) { const t = D().typeFiche; return !t || !SHOW[t] || SHOW[t](id); }
 
+/* ---------- Parcours pas-à-pas ----------
+   Un « step » est soit une section normale, soit un essai isolé (§ Essais),
+   soit l'écran de récapitulatif final. On ne peut avancer que dans l'ordre ;
+   une étape déjà franchie (Suivant cliqué) reste accessible en arrière. */
+let steps = [];
+let stepIndex = 0;
+
+function computeSteps() {
+  const out = [];
+  for (const s of SECTIONS) {
+    if (!sectionVisible(s.id)) continue;
+    if (s.id === 'essais') { for (const e of ESSAIS) out.push({ id: `essai-${e.n}`, parent: 'essais', section: s, essai: e }); }
+    else out.push({ id: s.id, section: s });
+  }
+  out.push({ id: 'recap', recap: true });
+  return out;
+}
+function stepUnlocked(idx) {
+  if (idx <= 0) return true;
+  const prevId = steps[idx - 1].id;
+  return !!(D()._visited && D()._visited[prevId]);
+}
+function enterFiche() {
+  steps = computeSteps();
+  const idx = steps.findIndex((s) => s.id === D()._step);
+  stepIndex = idx === -1 ? 0 : idx;
+  renderStep();
+}
+function goNext() {
+  const step = steps[stepIndex];
+  if (!step) return;
+  if (step.id === 'type' && !D().typeFiche) { toast('Choisissez le type de fiche pour continuer.'); return; }
+  const visited = D()._visited || (D()._visited = {});
+  visited[step.id] = true;
+  if (stepIndex < steps.length - 1) stepIndex++;
+  scheduleSave();
+  renderStep();
+}
+function goPrev() {
+  if (stepIndex > 0) stepIndex--;
+  renderStep();
+}
+function goToStep(id) {
+  steps = computeSteps();
+  const idx = steps.findIndex((s) => s.id === id);
+  if (idx === -1) return;
+  if (!stepUnlocked(idx)) { toast('Terminez d’abord les étapes précédentes.'); return; }
+  stepIndex = idx;
+  renderStep();
+}
+
+function renderSectionCard(s) {
+  const head = h('div', { class: 'card-head' },
+    s.num ? h('span', { class: 'hx', 'aria-hidden': 'true' }, String(s.num)) : null,
+    h('h2', {}, s.title),
+    s.tag ? h('span', { class: 'tag' }, s.tag) : null);
+  return h('section', { class: 'card', 'aria-label': s.title }, head, s.intro ? h('p', { class: 'card-intro' }, s.intro) : null, s.fields.map(renderField));
+}
+function renderEssaiStep(step) {
+  const s = step.section, e = step.essai;
+  const head = h('div', { class: 'card-head' }, h('h2', {}, s.title), h('span', { class: 'tag' }, s.tag || 'Verso'));
+  const sub = h('p', { class: 'card-intro' }, `Essai ${e.n} sur ${ESSAIS.length}` + (e.n === 1 && s.intro ? ' — ' + s.intro : ''));
+  const card = h('section', { class: 'card', 'aria-label': s.title + ' — essai ' + e.n }, head, sub, essaiCard(e));
+  if (e.n === 12) {
+    const al = h('div', { class: 'alert' }, 'Un ou plusieurs Δp sont mauvais : reprendre les essais 5, 6 et 7. Si les mêmes anomalies persistent, envisager dans les meilleurs délais le remplacement du disconnecteur. Ne pas mettre de bipasse sans protection équivalente.');
+    conditional.push([al, (d) => ['e10', 'e11', 'e12'].some((k) => d[k] === 'ko')]);
+    card.append(al);
+  }
+  return card;
+}
+function fieldValueLabel(f, v) {
+  if (f.t === 'seg') { const o = f.opts.find(([val]) => val === v); return o ? o[1] : v; }
+  if (f.t === 'check') return v ? 'Oui' : null;
+  return v;
+}
+function renderRecap() {
+  const wrap = h('div', { class: 'recap' });
+  wrap.append(h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', {}, 'Récapitulatif')),
+    h('p', { class: 'card-intro' }, 'Vérifiez les informations avant de générer le PDF. Touchez « Modifier » pour corriger une section.')));
+  const d = D();
+  for (const s of SECTIONS) {
+    if (s.id === 'type' || !sectionVisible(s.id)) continue;
+    const rows = [];
+    if (s.id === 'essais') {
+      for (const e of ESSAIS) {
+        const v = d[`e${e.n}`]; if (!v) continue;
+        const opt = e.opts && e.opts.find(([val]) => val === v);
+        rows.push([`Essai ${e.n} — ${e.g}`, opt ? opt[1] : v]);
+      }
+    } else if (s.id === 'pieces') {
+      for (let i = 1; i <= 5; i++) if (d[`piece${i}`]) rows.push([`Pièce ${i}`, [d[`piece${i}`], d[`piece${i}_n`] ? `(manœuvre ${d[`piece${i}_n`]})` : '', d[`piece${i}_obs`]].filter(Boolean).join(' ')]);
+    } else if (s.id === 'sign') {
+      rows.push(['Signature du vérificateur', d.sigVerif ? 'Signée' : 'Manquante']);
+      rows.push(['Signature du responsable', d.sigResp ? 'Signée' : 'Manquante']);
+      if (d.verifNom) rows.push(['Vérificateur', d.verifNom]);
+      if (d.respNom) rows.push(['Responsable', d.respNom]);
+    } else {
+      for (const k of keysOf(s, true)) {
+        const f = FIELD_META[k]; if (!f) continue;
+        const v = d[k]; if (v == null || v === '') continue;
+        const lab = fieldValueLabel(f, v); if (lab == null) continue;
+        rows.push([f.label, lab]);
+      }
+    }
+    const stepId = s.id === 'essais' ? 'essai-1' : s.id;
+    wrap.append(h('section', { class: 'card recap-card' },
+      h('div', { class: 'card-head' }, s.num ? h('span', { class: 'hx' }, String(s.num)) : null, h('h2', {}, s.title),
+        h('button', { type: 'button', class: 'btn small', onclick: () => goToStep(stepId) }, 'Modifier')),
+      rows.length ? h('dl', { class: 'recap-list' }, rows.flatMap(([l, v]) => [h('dt', {}, l), h('dd', {}, v)])) : h('p', { class: 'card-intro' }, 'Rien de renseigné.')));
+  }
+  return wrap;
+}
+function renderChips() {
+  steps = computeSteps();
+  const chips = $('#chips'); chips.innerHTML = '';
+  const d = D();
+  const addChip = (firstId, node) => {
+    const idx = steps.findIndex((s) => s.id === firstId);
+    if (idx === -1) return;
+    const unlocked = stepUnlocked(idx);
+    const isCurrent = steps[stepIndex] && (steps[stepIndex].id === firstId || (firstId === 'essai-1' && steps[stepIndex].parent === 'essais'));
+    node.classList.toggle('current', !!isCurrent);
+    if (!unlocked) node.disabled = true;
+    node.addEventListener('click', () => goToStep(firstId));
+    chips.append(node);
+  };
+  for (const s of SECTIONS) {
+    if (!sectionVisible(s.id)) continue;
+    const firstId = s.id === 'essais' ? 'essai-1' : s.id;
+    const keys = s.id === 'essais' ? ESSAIS.map((e) => `e${e.n}`) : s.id === 'pieces' ? [1, 2, 3, 4, 5].map((i) => `piece${i}`) : keysOf(s);
+    const filled = keys.some((k) => d[k] != null && d[k] !== '');
+    const chip = h('button', { type: 'button', class: 'chip' + (s.num ? '' : ' word') + (filled ? ' filled' : '') },
+      s.num ? h('span', { class: 'hx' }, String(s.num)) : null, s.num ? shortTitle(s) : s.chip);
+    addChip(firstId, chip);
+  }
+  addChip('recap', h('button', { type: 'button', class: 'chip word' }, 'Récap'));
+  if (steps[stepIndex]) $('#stepCounter').textContent = `Étape ${stepIndex + 1} / ${steps.length}`;
+  const cur = chips.querySelector('.chip.current');
+  if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+function renderBottomBar(step) {
+  const bar = $('#bottomBar'); bar.innerHTML = '';
+  if (stepIndex > 0) bar.append(h('button', { class: 'btn', type: 'button', onclick: goPrev }, 'Précédent'));
+  bar.append(step.recap
+    ? h('button', { id: 'btnPdf', class: 'btn primary', type: 'button', onclick: generate }, 'Générer le PDF')
+    : h('button', { class: 'btn primary', type: 'button', onclick: goNext }, 'Suivant'));
+}
+function renderStep() {
+  conditional.length = 0; sigSetups = []; idc = 0;
+  steps = computeSteps();
+  if (stepIndex >= steps.length) stepIndex = steps.length - 1;
+  if (stepIndex < 0) stepIndex = 0;
+  const step = steps[stepIndex];
+  D()._step = step.id;
+  const main = $('#form'); main.innerHTML = '';
+  if (step.recap) main.append(renderRecap());
+  else if (step.parent === 'essais') main.append(renderEssaiStep(step));
+  else main.append(renderSectionCard(step.section));
+  renderBottomBar(step);
+  afterChange();
+  requestAnimationFrame(() => sigSetups.forEach((f) => f()));
+  window.scrollTo(0, 0);
+}
+
 function afterChange(k) {
   const d = D();
   for (const [el, when] of conditional) el.hidden = !when(d);
-  for (const s of SECTIONS) {
-    const vis = sectionVisible(s.id);
-    $('#sec-' + s.id).hidden = !vis; $('#chip-' + s.id).hidden = !vis;
-    const keys = keysOf(s);
-    $('#chip-' + s.id).classList.toggle('filled', keys.some((kk) => d[kk] != null && d[kk] !== ''));
-  }
   if (k === 'typeFiche' || k === 'adressePose' || k == null) updateTitle();
+  renderChips();
 }
 function updateTitle() {
   $('#ficheTitle').textContent = D().adressePose || 'Nouvelle fiche';
@@ -714,7 +863,7 @@ const actions = {
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2600); }
 
-function openFiche(id) { current = fiches[id]; persist(); render(); window.scrollTo(0, 0); }
+function openFiche(id) { current = fiches[id]; persist(); enterFiche(); }
 
 function listFiches() {
   const list = $('#ficheList'); list.innerHTML = '';
@@ -737,7 +886,7 @@ function listFiches() {
         h('button', { type: 'button', class: 'btn small danger', onclick: () => {
           if (!confirm('Supprimer définitivement cette fiche ?')) return;
           delete fiches[f.id];
-          if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); render(); }
+          if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); enterFiche(); }
           persist(); listFiches();
         } }, 'Supprimer'))));
   }
@@ -787,7 +936,6 @@ function download() {
 /* =====================================================================
    Démarrage
    ===================================================================== */
-$('#btnPdf').addEventListener('click', generate);
 $('#btnShare').addEventListener('click', share);
 $('#btnSave').addEventListener('click', download);
 $('#btnOpen').addEventListener('click', () => window.open(pdfUrl, '_blank'));
@@ -803,7 +951,7 @@ let rw; addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() 
 
 const lastId = store.get('ba.current', null);
 current = fiches[lastId] || Object.values(fiches).sort((a, b) => b.updated - a.updated)[0] || newFiche();
-render();
+enterFiche();
 
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
