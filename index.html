@@ -647,7 +647,7 @@ function renderField(f) {
 
 const shortTitle = (s) => ({ s1: 'Propriétaire', s2: 'Vérificateur', s3: 'Disconnecteur', s4: 'Installation', s5: 'Mise en service', s6: 'Local', s7: 'Pose', s8: 'Risque', s9: 'Tests' })[s.id];
 
-function sectionVisible(id) { const t = D().typeFiche; return !t || !SHOW[t] || SHOW[t](id); }
+function sectionVisible(id, d = D()) { const t = d.typeFiche; return !t || !SHOW[t] || SHOW[t](id); }
 
 /* ---------- Parcours pas-à-pas ----------
    Un « step » est soit une section normale, soit un essai isolé (§ Essais),
@@ -829,8 +829,8 @@ function updateTitle() {
 }
 
 // Liste des clés d'une section (pour l'export et les indicateurs)
-function keysOf(s, onlyVisible = false) {
-  const d = D(), out = [];
+function keysOf(s, onlyVisible = false, d = D()) {
+  const out = [];
   const walk = (f) => {
     if (onlyVisible && f.when && !f.when(d)) return;
     if (f.t === 'row') return f.fields.forEach(walk);
@@ -846,11 +846,11 @@ function keysOf(s, onlyVisible = false) {
   s.fields.forEach(walk);
   return out;
 }
-function exportData() {
-  const d = D(), out = {};
+function exportData(d = D()) {
+  const out = {};
   for (const s of SECTIONS) {
-    if (!sectionVisible(s.id)) continue;
-    for (const k of keysOf(s, true)) if (d[k] != null && d[k] !== '') out[k] = d[k];
+    if (!sectionVisible(s.id, d)) continue;
+    for (const k of keysOf(s, true, d)) if (d[k] != null && d[k] !== '') out[k] = d[k];
   }
   return out;
 }
@@ -882,6 +882,7 @@ function listFiches() {
       h('small', {}, `${TYPES[d.typeFiche] || 'Type non choisi'}, modifiée le ${when}`),
       h('div', { class: 'row-actions' },
         f.id === current.id ? null : h('button', { type: 'button', class: 'btn small primary', onclick: () => { openFiche(f.id); $('#dlgFiches').close(); } }, 'Ouvrir'),
+        h('button', { type: 'button', class: 'btn small', onclick: (e) => generate(e.currentTarget, d) }, 'Voir le PDF'),
         h('button', { type: 'button', class: 'btn small', onclick: () => {
           const base = {}; KEEP_FOR_NEXT.forEach((k) => { if (d[k]) base[k] = d[k]; });
           if (d.verifDate) base.datePrecedente = d.verifDate;
@@ -898,21 +899,22 @@ function listFiches() {
 }
 
 /* ---------- Génération et export du PDF ---------- */
-let template = null, pdfFile = null, pdfUrl = null;
+let template = null, pdfFile = null, pdfUrl = null, pdfAdresse = '';
 async function getTemplate() {
   if (!template) { const r = await fetch('BA.pdf'); if (!r.ok) throw new Error('Modèle PDF introuvable'); template = await r.arrayBuffer(); }
   return template;
 }
 const slug = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
-async function generate(btn) {
+async function generate(btn, data) {
   const label = btn.textContent; btn.disabled = true; btn.textContent = 'Génération…';
   try {
-    const bytes = await BAFill.fillBA(PDFLib, await getTemplate(), exportData());
-    const d = D();
+    const d = data || D();
+    const bytes = await BAFill.fillBA(PDFLib, await getTemplate(), exportData(d));
     const typ = { mes: 'MiseEnService', maint: 'Maintenance', dep: 'Depannage' }[d.typeFiche] || 'Fiche';
     const name = ['BA', typ, slug(d.adressePose), (d.verifDate || today())].filter(Boolean).join('_') + '.pdf';
     pdfFile = new File([bytes], name, { type: 'application/pdf' });
+    pdfAdresse = d.adressePose || '';
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     pdfUrl = URL.createObjectURL(pdfFile);
     $('#pdfName').textContent = name;
@@ -931,7 +933,7 @@ async function generate(btn) {
 }
 async function share() {
   try {
-    await navigator.share({ files: [pdfFile], title: pdfFile.name, text: 'Fiche disconnecteur BA : ' + (D().adressePose || '') });
+    await navigator.share({ files: [pdfFile], title: pdfFile.name, text: 'Fiche disconnecteur BA : ' + pdfAdresse });
   } catch (e) { if (e.name !== 'AbortError') { toast('Partage impossible, enregistrement du fichier.'); download(); } }
 }
 function download() {
