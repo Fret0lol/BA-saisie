@@ -816,11 +816,14 @@ function renderStep() {
 function afterChange(k) {
   const d = D();
   for (const [el, when] of conditional) el.hidden = !when(d);
-  if (k === 'typeFiche' || k === 'adressePose' || k == null) updateTitle();
+  if (k === 'typeFiche' || k === 'adressePose' || k === 'verifDate' || k == null) updateTitle();
   renderChips();
 }
+// Nom d'une fiche : adresse de pose + date (celle du vérificateur une fois connue, sinon la date du jour)
+const frDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : v; };
+function ficheName(d) { return d.adressePose ? `${d.adressePose} — ${frDate(d.verifDate || today())}` : 'Nouvelle fiche'; }
 function updateTitle() {
-  $('#ficheTitle').textContent = D().adressePose || 'Nouvelle fiche';
+  $('#ficheTitle').textContent = ficheName(D());
   $('#ficheType').textContent = TYPES[D().typeFiche] || 'Type à choisir';
 }
 
@@ -874,7 +877,7 @@ function listFiches() {
     const d = f.data;
     const when = new Date(f.updated).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     list.append(h('div', { class: 'fiche-item' + (f.id === current.id ? ' current' : '') },
-      h('b', {}, d.adressePose || 'Sans adresse de pose'),
+      h('b', {}, ficheName(d)),
       h('small', {}, `${TYPES[d.typeFiche] || 'Type non choisi'}, modifiée le ${when}`),
       h('div', { class: 'row-actions' },
         f.id === current.id ? null : h('button', { type: 'button', class: 'btn small primary', onclick: () => { openFiche(f.id); $('#dlgFiches').close(); } }, 'Ouvrir'),
