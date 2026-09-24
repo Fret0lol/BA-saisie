@@ -131,6 +131,7 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .check { display: flex; gap: 12px; align-items: center; min-height: var(--tap); padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 8px; margin-top: 8px; }
 .check input { width: 24px; height: 24px; accent-color: var(--petrol); flex: none; }
 .check:has(input:checked) { border-color: var(--petrol); }
+.check:has(input.invalid) { border-color: var(--ko); }
 
 .btn { min-height: var(--tap); padding: 0 18px; border-radius: 8px; border: 1.5px solid var(--petrol); background: var(--paper); color: var(--petrol); font-weight: 700; font-size: 16px; }
 .btn.primary { background: var(--petrol); color: var(--petrol-ink); }
@@ -310,13 +311,14 @@ const SECTIONS = [
     T('communication', 'Communication avec un réseau complémentaire', { hint: 'eau de pluie, eau industrielle…', required: 1 }),
   ] },
   { id: 's5', num: 5, title: 'Mise en service', intro: 'Remplir aussi le cadre « Lors de la mise en service » plus bas.', fields: [
-    SEG('installType', 'Installation', [['neuve', 'Neuve'], ['renovation', 'Rénovation']]),
-    T('installateur', 'Installateur'),
-    { t: 'row', fields: [T('installateurTel', 'Téléphone', { type: 'tel' }), T('installateurMail', 'Mail', { type: 'email' })] },
-    T('installateurAdresse', 'Adresse de l’installateur'),
-    SEG('avis', 'Choix du dispositif de protection (EN 1717)', [['adapte', 'Adapté'], ['nonAdapte', 'Non adapté'], ['reserve', 'Avis réservé']]),
-    T('avisMotif', 'Motif', { when: (d) => d.avis === 'nonAdapte' || d.avis === 'reserve' }),
-    CHK('infoResponsable', 'Responsable du réseau informé de l’obligation de maintenance'),
+    SEG('miseEnService', 'Y a-t-il une mise en service ?', YN, { required: 1 }),
+    SEG('installType', 'Installation', [['neuve', 'Neuve'], ['renovation', 'Rénovation']], { when: eq('miseEnService', 'oui'), required: 1 }),
+    T('installateur', 'Installateur', { when: eq('miseEnService', 'oui'), required: 1 }),
+    { t: 'row', fields: [T('installateurTel', 'Téléphone', { type: 'tel', when: eq('miseEnService', 'oui'), required: 1 }), T('installateurMail', 'Mail', { type: 'email', when: eq('miseEnService', 'oui'), required: 1 })] },
+    T('installateurAdresse', 'Adresse de l’installateur', { when: eq('miseEnService', 'oui'), required: 1 }),
+    SEG('avis', 'Choix du dispositif de protection (EN 1717)', [['adapte', 'Adapté'], ['nonAdapte', 'Non adapté'], ['reserve', 'Avis réservé']], { when: eq('miseEnService', 'oui'), required: 1 }),
+    T('avisMotif', 'Motif', { when: (d) => d.miseEnService === 'oui' && (d.avis === 'nonAdapte' || d.avis === 'reserve'), required: 1 }),
+    CHK('infoResponsable', 'Responsable du réseau informé de l’obligation de maintenance', { when: eq('miseEnService', 'oui'), required: 1 }),
   ] },
   { id: 's6', num: 6, title: 'Conformité du local', intro: 'Selon EN 1717 : aération, accès, évacuation d’eau…', fields: [
     SEG('localConforme', 'Local conforme', YN),
@@ -520,7 +522,8 @@ function refreshSeg(k) {
 }
 
 function checkField(f) {
-  return h('label', { class: 'check field' }, h('input', { type: 'checkbox', checked: !!D()[f.k], onchange: (e) => setVal(f.k, e.target.checked) }), h('span', {}, f.label));
+  return h('label', { class: 'check field' }, h('input', { type: 'checkbox', name: f.k, checked: !!D()[f.k], onchange: (e) => { setVal(f.k, e.target.checked); e.target.classList.remove('invalid'); } }),
+    h('span', {}, f.label, f.required ? h('span', { class: 'req' }, ' *') : null));
 }
 
 function areaField(f) {
