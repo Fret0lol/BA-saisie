@@ -422,7 +422,7 @@ const FIELD_META = {};
 })(SECTIONS.flatMap((s) => s.fields));
 
 const PROFILE_KEYS = ['verificateur', 'competences', 'certificat', 'certifExpiration', 'entreprise', 'entrepriseTel', 'entrepriseAdresse', 'entrepriseMail',
-  'appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF', 'verifNom'];
+  'appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF', 'verifNom', 'sigVerif'];
 
 /* =====================================================================
    Stockage local (hors ligne)
@@ -558,7 +558,9 @@ function areaField(f) {
     h('textarea', { id, name: f.k, oninput: (e) => setVal(f.k, e.target.value) }, D()[f.k] ?? ''));
 }
 
-function sigField(f) {
+// get/set permettent de rebrancher le composant sur d'autres données que la fiche en cours
+// (ex. la signature enregistrée dans le profil vérificateur, § Paramètres).
+function sigField(f, get = () => D()[f.k], set = (v) => setVal(f.k, v), setups = sigSetups) {
   const wrap = h('div', { class: 'sig' });
   wrap.dataset.k = f.k;
   const canvas = h('canvas');
@@ -570,15 +572,16 @@ function sigField(f) {
     canvas.width = r.width * dpr; canvas.height = r.height * dpr;
     ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6; ctx.strokeStyle = '#12338C';
-    if (D()[f.k]) { const img = new Image(); img.onload = () => { const s = Math.min(r.width / img.width, r.height / img.height, 1) * 0.95; const w = img.width * s, hh = img.height * s; ctx.drawImage(img, (r.width - w) / 2, (r.height - hh) / 2, w, hh); }; img.src = D()[f.k]; wrap.classList.add('has'); }
+    const existing = get();
+    if (existing) { const img = new Image(); img.onload = () => { const s = Math.min(r.width / img.width, r.height / img.height, 1) * 0.95; const w = img.width * s, hh = img.height * s; ctx.drawImage(img, (r.width - w) / 2, (r.height - hh) / 2, w, hh); }; img.src = existing; wrap.classList.add('has'); }
   };
   const pos = (e) => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   canvas.addEventListener('pointerdown', (e) => { if (!ctx) setup(); drawing = true; last = pos(e); canvas.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last[0], last[1], 1.2, 0, 7); ctx.fillStyle = '#12338C'; ctx.fill(); wrap.classList.add('has'); dirty = true; });
   canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(...last); ctx.lineTo(...p); ctx.stroke(); last = p; });
-  const end = () => { if (!drawing) return; drawing = false; if (dirty) { setVal(f.k, trimCanvas(canvas)); wrap.classList.remove('invalid'); } };
+  const end = () => { if (!drawing) return; drawing = false; if (dirty) { set(trimCanvas(canvas)); wrap.classList.remove('invalid'); } };
   canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
-  const clear = () => { if (!ctx) setup(); ctx.clearRect(0, 0, canvas.width, canvas.height); wrap.classList.remove('has'); dirty = false; setVal(f.k, ''); };
-  sigSetups.push(setup);
+  const clear = () => { if (!ctx) setup(); ctx.clearRect(0, 0, canvas.width, canvas.height); wrap.classList.remove('has'); dirty = false; set(''); };
+  setups.push(setup);
   return h('div', { class: 'field' }, h('div', { class: 'lab' }, f.label, f.required ? h('span', { class: 'req' }, ' *') : null, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), wrap,
     h('div', { class: 'sig-actions' }, h('button', { type: 'button', class: 'btn small', onclick: clear }, 'Effacer')));
 }
@@ -990,7 +993,11 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 
 /* ---------- Paramètres : profil vérificateur, modifiable sans ouvrir de fiche ---------- */
 let profileDraft = {};
+let profileSigSetups = [];
 function profileField(f) {
+  if (f.t === 'sig') {
+    return sigField({ ...f, required: false }, () => profileDraft[f.k], (v) => { if (v) profileDraft[f.k] = v; else delete profileDraft[f.k]; }, profileSigSetups);
+  }
   if (f.t === 'seg') {
     const group = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': f.label });
     group.append(...f.opts.map(([v, lab]) => {
@@ -1006,8 +1013,10 @@ function profileField(f) {
   return h('div', { class: 'field' }, h('label', { for: id }, f.label), input);
 }
 function renderProfileForm() {
+  profileSigSetups.length = 0;
   const box = $('#profileForm'); box.innerHTML = '';
   for (const k of PROFILE_KEYS) { const f = FIELD_META[k]; if (f) box.append(profileField(f)); }
+  requestAnimationFrame(() => profileSigSetups.forEach((fn) => fn()));
 }
 function saveProfileDraft() {
   const p = {}; PROFILE_KEYS.forEach((k) => { if (profileDraft[k]) p[k] = profileDraft[k]; });
@@ -1018,7 +1027,7 @@ function renderSettingsPage() {
   const main = $('#form'); main.innerHTML = '';
   main.append(h('section', { class: 'card' },
     h('div', { class: 'card-head' }, h('h2', {}, 'Mes informations')),
-    h('p', { class: 'card-intro' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, appareillage de contrôle).'),
+    h('p', { class: 'card-intro' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, appareillage de contrôle, signature).'),
     h('div', { id: 'profileForm' }),
     h('div', { class: 'row-actions' }, h('button', { type: 'button', class: 'btn primary', onclick: saveProfileDraft }, 'Enregistrer'))));
   renderProfileForm();

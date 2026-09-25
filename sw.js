@@ -1,6 +1,6 @@
 // Service worker : met l'application en cache pour un fonctionnement hors ligne.
 // Changer VERSION à chaque mise à jour des fichiers pour forcer le rafraîchissement.
-const VERSION = 'fiche-ba-v21';
+const VERSION = 'fiche-ba-v22';
 const FILES = [
   './', 'index.html', 'fill.js', 'pdf-lib.min.js', 'BA.pdf', 'manifest.webmanifest',
   'fonts/atkinson-hyperlegible-latin-400-normal.woff2', 'fonts/atkinson-hyperlegible-latin-700-normal.woff2',
