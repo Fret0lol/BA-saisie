@@ -651,11 +651,18 @@ function piecesBlock() {
   let filledMax = 0;
   for (let i = 1; i <= 5; i++) if (d[`piece${i}`] || d[`piece${i}_n`] || d[`piece${i}_obs`]) filledMax = i;
   const count = Math.max(d._piecesCount || 1, filledMax);
+  const shiftUp = (from) => {
+    for (let j = from; j < 5; j++) ['', '_n', '_obs'].forEach((s) => setVal(`piece${j}${s}`, D()[`piece${j + 1}${s}`] ?? '', false));
+    ['', '_n', '_obs'].forEach((s) => setVal(`piece5${s}`, '', false));
+  };
   for (let i = 1; i <= 5; i++) {
     const row = h('div', { class: 'piece', hidden: i > count },
       h('div', {}, textField(T(`piece${i}`, `Pièce ${i}`))),
       h('div', {}, textField(T(`piece${i}_n`, 'N° manœuvre', { decimal: 1 }))),
-      h('div', { class: 'full' }, textField(T(`piece${i}_obs`, 'Observations'))));
+      h('div', { class: 'full' }, textField(T(`piece${i}_obs`, 'Observations'))),
+      h('div', { class: 'full', style: 'margin-top:8px' }, h('button', { type: 'button', class: 'btn small danger', onclick: () => {
+        shiftUp(i); D()._piecesCount = Math.max(1, count - 1); scheduleSave(); renderStep();
+      } }, 'Supprimer cette pièce')));
     row.querySelectorAll('.field').forEach((f) => (f.style.marginTop = '0'));
     box.append(row);
   }
