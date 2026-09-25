@@ -853,8 +853,10 @@ function renderChips() {
     const firstId = s.id === 'essais' ? 'essai-1' : s.id;
     const keys = s.id === 'essais' ? ESSAIS.map((e) => `e${e.n}`) : s.id === 'pieces' ? [1, 2, 3, 4, 5].map((i) => `piece${i}`) : keysOf(s);
     const filled = keys.some((k) => d[k] != null && d[k] !== '');
+    let label = s.num ? shortTitle(s) : s.chip;
+    if (s.id === 'essais' && steps[stepIndex] && steps[stepIndex].parent === 'essais') label = steps[stepIndex].essai.g;
     const chip = h('button', { type: 'button', class: 'chip' + (s.num ? '' : ' word') + (filled ? ' filled' : '') },
-      s.num ? h('span', { class: 'hx' }, String(s.num)) : null, s.num ? shortTitle(s) : s.chip);
+      s.num ? h('span', { class: 'hx' }, String(s.num)) : null, label);
     addChip(firstId, chip);
   }
   addChip('recap', h('button', { type: 'button', class: 'chip word' }, 'Récap'));
