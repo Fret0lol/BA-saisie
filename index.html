@@ -48,9 +48,10 @@ html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(118px + env(safe
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font: 16px/1.45 "Atkinson", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
 }
 button, input, textarea { font: inherit; color: inherit; }
+button svg { vertical-align: -5px; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--hex); outline-offset: 2px; }
 
@@ -69,7 +70,6 @@ button { cursor: pointer; }
 .saved { transition: opacity .3s; }
 .offline { display: none; color: var(--ink); background: var(--hex); border-radius: 4px; padding: 0 6px; font-weight: 700; font-size: 12px; }
 body.is-offline .offline { display: inline; }
-.icon-btn { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-weight: 700; font-size: 15px; }
 
 nav.chips { display: flex; gap: 6px; overflow-x: auto; padding: 6px 16px 10px; max-width: 760px; margin: 0 auto; scrollbar-width: none; }
 nav.chips::-webkit-scrollbar { display: none; }
@@ -170,11 +170,27 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .sig.has .ph { display: none; }
 .sig-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 
-/* Barre d'action */
-.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--paper); border-top: 1px solid var(--line);
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+/* Barre d'action + barre d'onglets, empilées en bas d'écran */
+.bottom-stack { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; flex-direction: column; }
+.bottom { background: var(--paper); border-top: 1px solid var(--line); padding: 10px 16px; }
+.bottom[hidden] { display: none; }
 .bottom-in { max-width: 760px; margin: 0 auto; display: flex; gap: 10px; }
 .bottom .btn.primary { flex: 1; font-size: 17px; min-height: 52px; }
+
+.tabbar { display: flex; background: var(--paper); border-top: 1px solid var(--line);
+  padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)); }
+.bottom + .tabbar { border-top: 1px solid var(--line); }
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 52px; padding: 6px 4px; border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 11px; font-weight: 700; }
+.tab svg { width: 22px; height: 22px; }
+.tab.active { color: var(--petrol); }
+
+/* Icônes d'action (listes de fiches) */
+.icon-actions { display: flex; gap: 8px; }
+.icon-action { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
+.icon-action svg { width: 20px; height: 20px; }
+.icon-action.primary { border-color: var(--petrol); color: var(--petrol); }
+.icon-action.danger { border-color: var(--ko); color: var(--ko); }
 
 /* Feuilles modales */
 dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88vh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--paper); color: var(--ink); }
@@ -191,8 +207,7 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
 .fiche-item.current { border-color: var(--petrol); border-width: 2px; }
 .fiche-item b { display: block; }
 .fiche-item small { color: var(--muted); }
-.fiche-list { max-height: 55vh; overflow-y: auto; }
-.toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-size: 15px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
+.toast { position: fixed; left: 50%; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-size: 15px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
 .toast.show { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -205,14 +220,16 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
       <h1 id="ficheTitle">Nouvelle fiche</h1>
       <div class="sub"><span id="ficheType">Type à choisir</span><span id="stepCounter"></span><span class="offline">Hors ligne</span><span class="saved" id="saved"></span></div>
     </div>
-    <button class="icon-btn" id="btnFiches" type="button">Mes fiches</button>
   </div>
   <nav class="chips" id="chips" aria-label="Étapes"></nav>
 </header>
 
 <main id="form"></main>
 
-<div class="bottom"><div class="bottom-in" id="bottomBar"></div></div>
+<div class="bottom-stack">
+  <div class="bottom" id="wizardBar"><div class="bottom-in" id="bottomBar"></div></div>
+  <nav class="tabbar" id="tabbar" aria-label="Navigation principale"></nav>
+</div>
 
 <dialog id="dlgPdf"><div class="sheet">
   <h3 id="pdfTitle">PDF prêt</h3>
@@ -223,27 +240,6 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
     <button class="btn" id="btnSave" type="button">Enregistrer sur l’appareil</button>
     <button class="btn" id="btnOpen" type="button">Ouvrir le PDF</button>
     <button class="btn small" id="btnClosePdf" type="button">Revenir à la saisie</button>
-  </div>
-</div></dialog>
-
-<dialog id="dlgFiches"><div class="sheet">
-  <h3>Mes fiches</h3>
-  <p>Enregistrées sur ce téléphone, disponibles hors ligne.</p>
-  <div class="stack">
-    <button class="btn primary" id="btnNew" type="button">Nouvelle fiche</button>
-    <button class="btn" id="btnProfile" type="button">Mes informations (vérificateur)</button>
-  </div>
-  <div class="fiche-list" id="ficheList"></div>
-  <div class="stack"><button class="btn small" id="btnCloseFiches" type="button">Fermer</button></div>
-</div></dialog>
-
-<dialog id="dlgProfile"><div class="sheet">
-  <h3>Mes informations</h3>
-  <p>Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, appareillage de contrôle).</p>
-  <div id="profileForm"></div>
-  <div class="stack">
-    <button class="btn primary" id="btnSaveProfile" type="button">Enregistrer</button>
-    <button class="btn small" id="btnCloseProfile" type="button">Fermer sans enregistrer</button>
   </div>
 </div></dialog>
 
@@ -427,9 +423,6 @@ const FIELD_META = {};
 
 const PROFILE_KEYS = ['verificateur', 'competences', 'certificat', 'certifExpiration', 'entreprise', 'entrepriseTel', 'entrepriseAdresse', 'entrepriseMail',
   'appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF', 'verifNom'];
-// Données conservées quand on prépare la visite suivante d'une même installation
-const KEEP_FOR_NEXT = ['adressePose', 'proprio', 'proprioTel', 'proprioAdresse', 'proprioMail', 'marque', 'typeDisc', 'logoNF', 'diametre', 'serie', 'norme',
-  'reseauProtege', 'lieuPose', 'traitement', 'traitementPos', 'traitementLequel', 'hauteur', 'communication', 'evacuation', 'respNom'];
 
 /* =====================================================================
    Stockage local (hors ligne)
@@ -455,6 +448,7 @@ function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     current.updated = Date.now(); fiches[current.id] = current; persist();
+    if (activeTab !== 'fiche') return;
     const el = document.getElementById('saved'); el.textContent = 'Enregistré'; el.style.opacity = 1;
     setTimeout(() => (el.style.opacity = 0), 1500);
   }, 350);
@@ -473,6 +467,32 @@ const h = (tag, attrs = {}, ...kids) => {
   for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
   return el;
 };
+// Icônes SVG dessinées à la main (traits, sans dépendance externe)
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs = {}, ...kids) => {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  for (const kid of kids.flat()) if (kid) el.append(kid);
+  return el;
+};
+const ICONS = {
+  doc: () => svg('path', { d: 'M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6' }),
+  list: () => svg('g', {}, svg('path', { d: 'M4 6h16 M4 12h16 M4 18h10' })),
+  gear: () => svg('g', {},
+    svg('line', { x1: 4, y1: 6, x2: 20, y2: 6 }), svg('circle', { cx: 15, cy: 6, r: 2, fill: 'var(--paper)' }),
+    svg('line', { x1: 4, y1: 12, x2: 20, y2: 12 }), svg('circle', { cx: 9, cy: 12, r: 2, fill: 'var(--paper)' }),
+    svg('line', { x1: 4, y1: 18, x2: 20, y2: 18 }), svg('circle', { cx: 17, cy: 18, r: 2, fill: 'var(--paper)' })),
+  plus: () => svg('path', { d: 'M12 5v14 M5 12h14' }),
+  open: () => svg('path', { d: 'M13 6l6 6-6 6 M5 12h14' }),
+  trash: () => svg('path', { d: 'M6 7h12 M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2 M7 7l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12' }),
+  eye: () => svg('g', {}, svg('path', { d: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z' }), svg('circle', { cx: 12, cy: 12, r: 3 })),
+  pencil: () => svg('path', { d: 'M12 20h9 M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z' }),
+};
+function icon(name) {
+  return svg('svg', { viewBox: '0 0 24 24', width: 20, height: 20, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' },
+    (ICONS[name] || ICONS.doc)());
+}
+
 const D = () => current.data;
 const conditional = []; // [element, when(data)]
 const detailsAuto = []; // [<details>, shouldOpen(data)] — ouvert automatiquement, jamais refermé tout seul
@@ -697,11 +717,12 @@ function sectionVisible(id, d = D()) {
 }
 
 /* ---------- Parcours pas-à-pas ----------
-   Un « step » est soit une section normale, soit un essai isolé (§ Essais),
-   soit l'écran de récapitulatif final. On ne peut avancer que dans l'ordre ;
-   une étape déjà franchie (Suivant cliqué) reste accessible en arrière. */
+   Un « step » est soit une section normale, soit un essai isolé (§ Essais).
+   On ne peut avancer que dans l'ordre ; une étape déjà franchie (Suivant
+   cliqué) reste accessible en arrière. */
 let steps = [];
 let stepIndex = 0;
+let activeTab = 'fiche'; // 'fiche' | 'fiches' | 'settings'
 
 function computeSteps() {
   const out = [];
@@ -718,10 +739,11 @@ function stepUnlocked(idx) {
   return !!(D()._visited && D()._visited[prevId]);
 }
 function enterFiche() {
+  activeTab = 'fiche';
   steps = computeSteps();
   const idx = steps.findIndex((s) => s.id === D()._step);
   stepIndex = idx === -1 ? 0 : idx;
-  renderStep();
+  renderPage();
 }
 // Champs obligatoires : bloquent le passage à l'étape suivante (pas de saisie forcée en arrière)
 function collectRequiredFields(fields) {
@@ -886,6 +908,28 @@ function renderStep() {
   window.scrollTo(0, 0);
 }
 
+/* ---------- Pages (Fiche / Mes fiches / Paramètres) et barre d'onglets ---------- */
+function renderPage() {
+  $('#chips').hidden = activeTab !== 'fiche';
+  $('#wizardBar').hidden = activeTab !== 'fiche';
+  if (activeTab === 'fiche') { updateTitle(); renderStep(); } else {
+    $('#chips').innerHTML = '';
+    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : 'Paramètres';
+    $('#ficheType').textContent = ''; $('#stepCounter').textContent = ''; $('#saved').style.opacity = 0;
+    if (activeTab === 'fiches') renderFichesPage(); else renderSettingsPage();
+  }
+  renderTabbar();
+  window.scrollTo(0, 0);
+}
+function switchTab(tab) { activeTab = tab; renderPage(); }
+function renderTabbar() {
+  const bar = $('#tabbar'); bar.innerHTML = '';
+  const items = [['fiche', 'doc', 'Fiche'], ['fiches', 'list', 'Mes fiches'], ['settings', 'gear', 'Paramètres']];
+  for (const [id, ic, label] of items) {
+    bar.append(h('button', { type: 'button', class: 'tab' + (activeTab === id ? ' active' : ''), onclick: () => switchTab(id) }, icon(ic), h('span', {}, label)));
+  }
+}
+
 function afterChange(k) {
   const d = D();
   for (const [el, when] of conditional) el.hidden = !when(d);
@@ -893,11 +937,14 @@ function afterChange(k) {
   if (k === 'typeFiche' || k === 'adressePose' || k === 'verifDate' || k == null) updateTitle();
   renderChips();
 }
-// Nom d'une fiche : adresse de pose + date (celle du vérificateur une fois connue, sinon la date du jour)
+// Nom d'une fiche : adresse de pose + date (celle du vérificateur une fois connue, sinon la date du jour),
+// sauf si l'utilisateur l'a renommée manuellement depuis « Mes fiches ».
 const frDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : v; };
 function ficheName(d) { return d.adressePose ? `${d.adressePose} — ${frDate(d.verifDate || today())}` : 'Nouvelle fiche'; }
+function ficheDisplayName(f) { return f.customName || ficheName(f.data); }
 function updateTitle() {
-  $('#ficheTitle').textContent = ficheName(D());
+  if (activeTab !== 'fiche') return;
+  $('#ficheTitle').textContent = ficheDisplayName(current);
   $('#ficheType').textContent = TYPES[D().typeFiche] || 'Type à choisir';
 }
 
@@ -941,7 +988,7 @@ const actions = {
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2600); }
 
-/* ---------- Mes informations (profil vérificateur), modifiable sans ouvrir de fiche ---------- */
+/* ---------- Paramètres : profil vérificateur, modifiable sans ouvrir de fiche ---------- */
 let profileDraft = {};
 function profileField(f) {
   if (f.t === 'seg') {
@@ -962,39 +1009,55 @@ function renderProfileForm() {
   const box = $('#profileForm'); box.innerHTML = '';
   for (const k of PROFILE_KEYS) { const f = FIELD_META[k]; if (f) box.append(profileField(f)); }
 }
-function openProfile() { profileDraft = { ...store.get('ba.profile', {}) }; renderProfileForm(); $('#dlgProfile').showModal(); }
 function saveProfileDraft() {
   const p = {}; PROFILE_KEYS.forEach((k) => { if (profileDraft[k]) p[k] = profileDraft[k]; });
-  store.set('ba.profile', p); toast('Informations enregistrées pour vos prochaines fiches.'); $('#dlgProfile').close();
+  store.set('ba.profile', p); toast('Informations enregistrées pour vos prochaines fiches.');
+}
+function renderSettingsPage() {
+  profileDraft = { ...store.get('ba.profile', {}) };
+  const main = $('#form'); main.innerHTML = '';
+  main.append(h('section', { class: 'card' },
+    h('div', { class: 'card-head' }, h('h2', {}, 'Mes informations')),
+    h('p', { class: 'card-intro' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, appareillage de contrôle).'),
+    h('div', { id: 'profileForm' }),
+    h('div', { class: 'row-actions' }, h('button', { type: 'button', class: 'btn primary', onclick: saveProfileDraft }, 'Enregistrer'))));
+  renderProfileForm();
 }
 
 function openFiche(id) { current = fiches[id]; persist(); enterFiche(); }
 
-function listFiches() {
-  const list = $('#ficheList'); list.innerHTML = '';
+function renameFiche(f) {
+  const next = prompt('Renommer la fiche', ficheDisplayName(f));
+  if (next == null) return;
+  const name = next.trim();
+  if (name) f.customName = name; else delete f.customName;
+  persist();
+  if (f.id === current.id) updateTitle();
+  if (activeTab === 'fiches') renderFichesPage();
+}
+function renderFichesPage() {
+  const main = $('#form'); main.innerHTML = '';
+  main.append(h('button', { type: 'button', class: 'btn primary', style: 'width:100%', onclick: () => { const f = newFiche(); openFiche(f.id); } }, icon('plus'), ' Nouvelle fiche'));
+  const list = h('div', { class: 'fiche-list' });
+  main.append(list);
   const arr = Object.values(fiches).sort((a, b) => b.updated - a.updated);
   if (!arr.length) list.append(h('p', {}, 'Aucune fiche pour l’instant.'));
   for (const f of arr) {
     const d = f.data;
     const when = new Date(f.updated).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     list.append(h('div', { class: 'fiche-item' + (f.id === current.id ? ' current' : '') },
-      h('b', {}, ficheName(d)),
+      h('b', {}, ficheDisplayName(f)),
       h('small', {}, `${TYPES[d.typeFiche] || 'Type non choisi'}, modifiée le ${when}`),
-      h('div', { class: 'row-actions' },
-        f.id === current.id ? null : h('button', { type: 'button', class: 'btn small primary', onclick: () => { openFiche(f.id); $('#dlgFiches').close(); } }, 'Ouvrir'),
-        h('button', { type: 'button', class: 'btn small', onclick: (e) => generate(e.currentTarget, d) }, 'Voir le PDF'),
-        h('button', { type: 'button', class: 'btn small', onclick: () => {
-          const base = {}; KEEP_FOR_NEXT.forEach((k) => { if (d[k]) base[k] = d[k]; });
-          if (d.verifDate) base.datePrecedente = d.verifDate;
-          base.typeFiche = 'maint';
-          const nf = newFiche(base); openFiche(nf.id); $('#dlgFiches').close(); toast('Nouvelle visite préparée avec les données de l’installation.');
-        } }, 'Visite suivante'),
-        h('button', { type: 'button', class: 'btn small danger', onclick: () => {
+      h('div', { class: 'icon-actions' },
+        f.id === current.id ? null : h('button', { type: 'button', class: 'icon-action primary', 'aria-label': 'Ouvrir', title: 'Ouvrir', onclick: () => openFiche(f.id) }, icon('open')),
+        h('button', { type: 'button', class: 'icon-action', 'aria-label': 'Renommer', title: 'Renommer', onclick: () => renameFiche(f) }, icon('pencil')),
+        h('button', { type: 'button', class: 'icon-action', 'aria-label': 'Voir le PDF', title: 'Voir le PDF', onclick: (e) => generate(e.currentTarget, d) }, icon('eye')),
+        h('button', { type: 'button', class: 'icon-action danger', 'aria-label': 'Supprimer', title: 'Supprimer', onclick: () => {
           if (!confirm('Supprimer définitivement cette fiche ?')) return;
           delete fiches[f.id];
-          if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); enterFiche(); }
-          persist(); listFiches();
-        } }, 'Supprimer'))));
+          if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); }
+          persist(); renderFichesPage();
+        } }, icon('trash')))));
   }
 }
 
@@ -1047,12 +1110,6 @@ $('#btnShare').addEventListener('click', share);
 $('#btnSave').addEventListener('click', download);
 $('#btnOpen').addEventListener('click', () => window.open(pdfUrl, '_blank'));
 $('#btnClosePdf').addEventListener('click', () => $('#dlgPdf').close());
-$('#btnFiches').addEventListener('click', () => { listFiches(); $('#dlgFiches').showModal(); });
-$('#btnCloseFiches').addEventListener('click', () => $('#dlgFiches').close());
-$('#btnNew').addEventListener('click', () => { const f = newFiche(); openFiche(f.id); $('#dlgFiches').close(); });
-$('#btnProfile').addEventListener('click', openProfile);
-$('#btnSaveProfile').addEventListener('click', saveProfileDraft);
-$('#btnCloseProfile').addEventListener('click', () => $('#dlgProfile').close());
 document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
 $('#form').addEventListener('input', (e) => e.target.classList.remove('invalid'));
 
