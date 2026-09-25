@@ -647,14 +647,21 @@ function beep() {
 
 function piecesBlock() {
   const box = h('div');
+  const d = D();
+  let filledMax = 0;
+  for (let i = 1; i <= 5; i++) if (d[`piece${i}`] || d[`piece${i}_n`] || d[`piece${i}_obs`]) filledMax = i;
+  const count = Math.max(d._piecesCount || 1, filledMax);
   for (let i = 1; i <= 5; i++) {
-    const row = h('div', { class: 'piece' },
+    const row = h('div', { class: 'piece', hidden: i > count },
       h('div', {}, textField(T(`piece${i}`, `Pièce ${i}`))),
       h('div', {}, textField(T(`piece${i}_n`, 'N° manœuvre', { decimal: 1 }))),
       h('div', { class: 'full' }, textField(T(`piece${i}_obs`, 'Observations'))));
     row.querySelectorAll('.field').forEach((f) => (f.style.marginTop = '0'));
-    if (i > 1) conditional.push([row, (d) => [`piece${i}`, `piece${i}_n`, `piece${i}_obs`, `piece${i - 1}`, `piece${i - 1}_obs`].some((k) => d[k])]);
     box.append(row);
+  }
+  if (count < 5) {
+    box.append(h('button', { type: 'button', class: 'btn small', style: 'margin-top:12px',
+      onclick: () => { D()._piecesCount = count + 1; scheduleSave(); renderStep(); } }, 'Ajouter une pièce'));
   }
   return box;
 }

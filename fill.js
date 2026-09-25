@@ -80,13 +80,10 @@
     ['respDate', 2, 483, 542, 568, { date: 1 }],
   ];
 
-  // Tableau « pièces réparées ou remplacées » : 5 lignes
-  for (let i = 1; i <= 5; i++) {
-    const base = 752 + (i - 1) * 12;
-    TEXT.push([`piece${i}`, 2, 26, null, 192, { base }]);
-    TEXT.push([`piece${i}_n`, 2, 199, null, 277, { base }]);
-    TEXT.push([`piece${i}_obs`, 2, 284, null, 444, { base }]);
-  }
+  // Tableau « pièces réparées ou remplacées » : 5 lignes, rendues à part (voir PIECES_COLS)
+  // pour permettre aux observations de passer sur plusieurs lignes sans être rognées.
+  const PIECES_COLS = { desc: [26, 192], num: [199, 277], obs: [284, 444] };
+  const PIECES_BASE = 752, PIECES_LINE_H = 8, PIECES_ROW_GAP = 4, PIECES_SIZE = 7;
 
   // Motif de non-conformité de pose : zone multiligne (§7)
   const POSE_MOTIF_LINES = [[57, 455, 241], [30, 472, 240], [30, 488, 240], [30, 505, 240], [30, 521, 240],
@@ -220,6 +217,35 @@
         if (font.widthOfTextAtSize(test, size) <= e - x || !cur) cur = test; else { flush(); cur = w; }
       }
       flush();
+    }
+
+    // Pièces réparées ou remplacées : texte réparti sur plusieurs lignes (jamais tronqué)
+    function wrapWords(str, maxW, size) {
+      const words = clean(str).split(/\s+/).filter(Boolean);
+      const lines = [];
+      let cur = '';
+      for (const w of words) {
+        const test = cur ? cur + ' ' + w : w;
+        if (!cur || font.widthOfTextAtSize(test, size) <= maxW) cur = test;
+        else { lines.push(cur); cur = w; }
+      }
+      if (cur) lines.push(cur);
+      return lines;
+    }
+    {
+      let base = PIECES_BASE;
+      for (let i = 1; i <= 5; i++) {
+        const desc = data[`piece${i}`], num = data[`piece${i}_n`], obs = data[`piece${i}_obs`];
+        if (!desc && !num && !obs) continue;
+        const [dx, dEnd] = PIECES_COLS.desc, [nx, nEnd] = PIECES_COLS.num, [ox, oEnd] = PIECES_COLS.obs;
+        const descLines = desc ? wrapWords(desc, dEnd - dx, PIECES_SIZE) : [];
+        const obsLines = obs ? wrapWords(obs, oEnd - ox, PIECES_SIZE) : [];
+        const rows = Math.max(descLines.length, obsLines.length, 1);
+        descLines.forEach((ln, j) => write(2, dx, base + j * PIECES_LINE_H, dEnd, ln, { size: PIECES_SIZE }));
+        if (num) write(2, nx, base, nEnd, num, { size: PIECES_SIZE });
+        obsLines.forEach((ln, j) => write(2, ox, base + j * PIECES_LINE_H, oEnd, ln, { size: PIECES_SIZE }));
+        base += rows * PIECES_LINE_H + PIECES_ROW_GAP;
+      }
     }
 
     // Coches
