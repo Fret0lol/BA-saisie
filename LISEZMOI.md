@@ -24,6 +24,12 @@ Un workflow GitHub Actions (`.github/workflows/deploy.yml`) publie automatiqueme
 
 Ensuite, chaque `push` sur `main` republie automatiquement le site à jour.
 
+**Erreur « Get Pages site failed... Not Found » au premier déploiement ?**
+Cela signifie que Pages n'a encore jamais été activé sur ce dépôt.
+Le workflow essaie de l'activer lui-même (`enablement: true`), mais si l'erreur persiste,
+faites l'étape 1 manuellement dans **Settings > Pages** puis relancez le workflow
+(**Actions > Déploiement GitHub Pages > Run workflow**, ou repoussez un commit).
+
 ## Installation sur les téléphones
 1. Ouvrir l'adresse une première fois avec une connexion (tout est alors mis en cache).
 2. iPhone : Safari > Partager > « Sur l'écran d'accueil ». Android : Chrome > menu > « Installer l'application ».
