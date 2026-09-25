@@ -102,6 +102,7 @@ section.card[hidden] { display: none; }
 .req { color: var(--ko); }
 input.invalid, textarea.invalid { border-color: var(--ko); }
 .seg.invalid { outline: 2px solid var(--ko); outline-offset: 3px; border-radius: 8px; }
+.sig.invalid { border-color: var(--ko); border-style: solid; }
 .field .hint { font-weight: 400; color: var(--muted); font-size: 13px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
@@ -370,13 +371,13 @@ const SECTIONS = [
   ] },
   { id: 'pieces', chip: 'Pièces', tag: 'Verso', title: 'Pièces réparées ou remplacées', intro: 'Avec le numéro de la manœuvre concernée.', fields: [{ t: 'pieces' }] },
   { id: 'sign', chip: 'Signatures', tag: 'Verso', title: 'Signatures', fields: [
-    T('verifNom', 'Le vérificateur'),
-    T('verifDate', 'Date', { type: 'date' }),
-    { t: 'sig', k: 'sigVerif', label: 'Signature du vérificateur' },
+    T('verifNom', 'Le vérificateur', { required: 1 }),
+    T('verifDate', 'Date', { type: 'date', required: 1 }),
+    { t: 'sig', k: 'sigVerif', label: 'Signature du vérificateur', required: 1 },
     T('datePrecedente', 'Date de la précédente vérification', { type: 'date' }),
-    T('respNom', 'Responsable du réseau intérieur ou son représentant'),
+    T('respNom', 'Responsable du réseau intérieur ou son représentant', { hint: 'facultatif' }),
     T('respDate', 'Date', { type: 'date' }),
-    { t: 'sig', k: 'sigResp', label: 'Signature du responsable', hint: 'Indispensable' },
+    { t: 'sig', k: 'sigResp', label: 'Signature du responsable', hint: 'facultatif' },
   ] },
 ];
 
@@ -544,6 +545,7 @@ function areaField(f) {
 
 function sigField(f) {
   const wrap = h('div', { class: 'sig' });
+  wrap.dataset.k = f.k;
   const canvas = h('canvas');
   wrap.append(canvas, h('div', { class: 'ph' }, 'Signez ici avec le doigt'));
   let ctx, drawing = false, dirty = false, last;
@@ -558,11 +560,11 @@ function sigField(f) {
   const pos = (e) => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   canvas.addEventListener('pointerdown', (e) => { if (!ctx) setup(); drawing = true; last = pos(e); canvas.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last[0], last[1], 1.2, 0, 7); ctx.fillStyle = '#12338C'; ctx.fill(); wrap.classList.add('has'); dirty = true; });
   canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(...last); ctx.lineTo(...p); ctx.stroke(); last = p; });
-  const end = () => { if (!drawing) return; drawing = false; if (dirty) setVal(f.k, trimCanvas(canvas)); };
+  const end = () => { if (!drawing) return; drawing = false; if (dirty) { setVal(f.k, trimCanvas(canvas)); wrap.classList.remove('invalid'); } };
   canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
   const clear = () => { if (!ctx) setup(); ctx.clearRect(0, 0, canvas.width, canvas.height); wrap.classList.remove('has'); dirty = false; setVal(f.k, ''); };
   sigSetups.push(setup);
-  return h('div', { class: 'field' }, h('div', { class: 'lab' }, f.label, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), wrap,
+  return h('div', { class: 'field' }, h('div', { class: 'lab' }, f.label, f.required ? h('span', { class: 'req' }, ' *') : null, f.hint ? h('span', { class: 'hint' }, ' (' + f.hint + ')') : null), wrap,
     h('div', { class: 'sig-actions' }, h('button', { type: 'button', class: 'btn small', onclick: clear }, 'Effacer')));
 }
 let sigSetups = [];
@@ -733,7 +735,7 @@ function markMissing(fields) {
   let first = null;
   for (const f of fields) {
     for (const k of f.keys || [f.k]) {
-      const el = main.querySelector(`[name="${k}"]`) || main.querySelector(`.seg[data-k="${k}"]`);
+      const el = main.querySelector(`[name="${k}"]`) || main.querySelector(`.seg[data-k="${k}"]`) || main.querySelector(`.sig[data-k="${k}"]`);
       if (el) { el.classList.add('invalid'); if (!first) first = el; }
     }
   }
