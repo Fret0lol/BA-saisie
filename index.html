@@ -679,7 +679,12 @@ function renderField(f) {
 
 const shortTitle = (s) => ({ s1: 'Propriétaire', s2: 'Vérificateur', s3: 'Disconnecteur', s4: 'Installation', s5: 'Mise en service', s6: 'Local', s7: 'Pose', s8: 'Risque', s9: 'Tests' })[s.id];
 
-function sectionVisible(id, d = D()) { const t = d.typeFiche; return !t || !SHOW[t] || SHOW[t](id); }
+function sectionVisible(id, d = D()) {
+  const t = d.typeFiche;
+  if (!(!t || !SHOW[t] || SHOW[t](id))) return false;
+  if (id === 'mesAno') return d.miseEnService === 'oui'; // dépend de la réponse donnée en §5
+  return true;
+}
 
 /* ---------- Parcours pas-à-pas ----------
    Un « step » est soit une section normale, soit un essai isolé (§ Essais),
