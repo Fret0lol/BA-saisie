@@ -115,7 +115,8 @@ input[type=date] { appearance: none; -webkit-appearance: none; display: block; }
 textarea { min-height: 110px; resize: vertical; }
 input:focus, textarea:focus { border-color: var(--petrol); outline: none; background: var(--paper); }
 .prefix { display: flex; align-items: stretch; }
-.prefix span { white-space: nowrap; display: grid; place-items: center; padding: 0 10px; border: 1.5px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px; color: var(--muted); font-weight: 700; background: var(--bg); }
+.prefix > span { white-space: nowrap; display: flex; align-items: center; padding: 0 10px; border: 1.5px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px; color: var(--muted); font-weight: 700; background: var(--bg); }
+.prefix > span .req { color: var(--ko); }
 .prefix input { border-radius: 0 8px 8px 0; }
 
 /* Choix segmentés */
@@ -148,7 +149,7 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .essai-g { font-weight: 700; font-size: 17px; }
 .essai-m { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
 .press { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
-.press .prefix span { min-width: 58px; }
+.press .prefix > span { min-width: 58px; }
 .timer { margin-top: 10px; }
 .timer.run { background: var(--hex); border-color: var(--hex); color: var(--hex-ink); }
 .essai details { margin-top: 12px; }
