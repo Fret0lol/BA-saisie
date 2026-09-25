@@ -157,13 +157,6 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .alert[hidden] { display: none; }
 .note-star { font-size: 14px; color: var(--muted); margin-top: 6px; }
 
-/* Récapitulatif */
-.recap-card .card-head h2 { flex: 1; }
-.recap-list { margin: 10px 0 0; }
-.recap-list dt { font-weight: 700; font-size: 13px; color: var(--muted); margin-top: 8px; }
-.recap-list dt:first-child { margin-top: 0; }
-.recap-list dd { margin: 0 0 0; font-size: 15px; }
-
 /* Pièces */
 .piece { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
 .piece .full { grid-column: 1 / -1; }
@@ -714,7 +707,6 @@ function computeSteps() {
     if (s.id === 'essais') { for (const e of ESSAIS) out.push({ id: `essai-${e.n}`, parent: 'essais', section: s, essai: e }); }
     else out.push({ id: s.id, section: s });
   }
-  out.push({ id: 'recap', recap: true });
   return out;
 }
 function stepUnlocked(idx) {
@@ -813,48 +805,6 @@ function renderEssaiStep(step) {
   }
   return card;
 }
-function fieldValueLabel(f, v) {
-  if (f.t === 'seg') { const o = f.opts.find(([val]) => val === v); return o ? o[1] : v; }
-  if (f.t === 'check') return v ? 'Oui' : null;
-  return v;
-}
-function renderRecap() {
-  const wrap = h('div', { class: 'recap' });
-  wrap.append(h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('h2', {}, 'Récapitulatif')),
-    h('p', { class: 'card-intro' }, 'Vérifiez les informations avant de générer le PDF. Touchez « Modifier » pour corriger une section.')));
-  const d = D();
-  for (const s of SECTIONS) {
-    if (s.id === 'type' || !sectionVisible(s.id)) continue;
-    const rows = [];
-    if (s.id === 'essais') {
-      for (const e of ESSAIS) {
-        const v = d[`e${e.n}`]; if (!v) continue;
-        const opt = e.opts && e.opts.find(([val]) => val === v);
-        rows.push([`Essai ${e.n} — ${e.g}`, opt ? opt[1] : v]);
-      }
-    } else if (s.id === 'pieces') {
-      for (let i = 1; i <= 5; i++) if (d[`piece${i}`]) rows.push([`Pièce ${i}`, [d[`piece${i}`], d[`piece${i}_n`] ? `(manœuvre ${d[`piece${i}_n`]})` : '', d[`piece${i}_obs`]].filter(Boolean).join(' ')]);
-    } else if (s.id === 'sign') {
-      rows.push(['Signature du vérificateur', d.sigVerif ? 'Signée' : 'Manquante']);
-      rows.push(['Signature du responsable', d.sigResp ? 'Signée' : 'Manquante']);
-      if (d.verifNom) rows.push(['Vérificateur', d.verifNom]);
-      if (d.respNom) rows.push(['Responsable', d.respNom]);
-    } else {
-      for (const k of keysOf(s, true)) {
-        const f = FIELD_META[k]; if (!f) continue;
-        const v = d[k]; if (v == null || v === '') continue;
-        const lab = fieldValueLabel(f, v); if (lab == null) continue;
-        rows.push([f.label, lab]);
-      }
-    }
-    const stepId = s.id === 'essais' ? 'essai-1' : s.id;
-    wrap.append(h('section', { class: 'card recap-card' },
-      h('div', { class: 'card-head' }, s.num ? h('span', { class: 'hx' }, String(s.num)) : null, h('h2', {}, s.title),
-        h('button', { type: 'button', class: 'btn small', onclick: () => goToStep(stepId) }, 'Modifier')),
-      rows.length ? h('dl', { class: 'recap-list' }, rows.flatMap(([l, v]) => [h('dt', {}, l), h('dd', {}, v)])) : h('p', { class: 'card-intro' }, 'Rien de renseigné.')));
-  }
-  return wrap;
-}
 function renderChips() {
   steps = computeSteps();
   const chips = $('#chips'); chips.innerHTML = '';
@@ -880,16 +830,16 @@ function renderChips() {
       s.num ? h('span', { class: 'hx' }, String(s.num)) : null, label);
     addChip(firstId, chip);
   }
-  addChip('recap', h('button', { type: 'button', class: 'chip word' }, 'Récap'));
   if (steps[stepIndex]) $('#stepCounter').textContent = `Étape ${stepIndex + 1} / ${steps.length}`;
   const cur = chips.querySelector('.chip.current');
   if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
-function renderBottomBar(step) {
+function renderBottomBar() {
   const bar = $('#bottomBar'); bar.innerHTML = '';
+  const isLast = stepIndex === steps.length - 1;
   if (stepIndex > 0) bar.append(h('button', { class: 'btn', type: 'button', onclick: goPrev }, 'Précédent'));
-  if (!step.recap) bar.append(h('button', { class: 'btn', type: 'button', 'aria-label': 'Aperçu du PDF rempli', onclick: (e) => generate(e.currentTarget) }, 'Aperçu'));
-  bar.append(step.recap
+  if (!isLast) bar.append(h('button', { class: 'btn', type: 'button', 'aria-label': 'Aperçu du PDF rempli', onclick: (e) => generate(e.currentTarget) }, 'Aperçu'));
+  bar.append(isLast
     ? h('button', { class: 'btn primary', type: 'button', onclick: (e) => generate(e.currentTarget) }, 'Générer le PDF')
     : h('button', { class: 'btn primary', type: 'button', onclick: goNext }, 'Suivant'));
 }
@@ -901,10 +851,9 @@ function renderStep() {
   const step = steps[stepIndex];
   D()._step = step.id;
   const main = $('#form'); main.innerHTML = '';
-  if (step.recap) main.append(renderRecap());
-  else if (step.parent === 'essais') main.append(renderEssaiStep(step));
+  if (step.parent === 'essais') main.append(renderEssaiStep(step));
   else main.append(renderSectionCard(step.section));
-  renderBottomBar(step);
+  renderBottomBar();
   afterChange();
   requestAnimationFrame(() => sigSetups.forEach((f) => f()));
   window.scrollTo(0, 0);
