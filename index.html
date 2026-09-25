@@ -474,6 +474,7 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 const D = () => current.data;
 const conditional = []; // [element, when(data)]
+const detailsAuto = []; // [<details>, shouldOpen(data)] — ouvert automatiquement, jamais refermé tout seul
 let idc = 0;
 
 function setVal(k, v, fromUser = true) {
@@ -581,7 +582,7 @@ function essaiCard(e) {
   card.append(h('div', { class: 'essai-head' }, h('div', { class: 'essai-n' }, String(e.n)),
     h('div', {}, h('div', { class: 'essai-g' }, e.g), h('p', { class: 'essai-m' }, e.m))));
   if (e.star) card.append(h('p', { class: 'note-star' }, '* Attendre 3 min avant de relever la pression.'), timerButton());
-  if (e.p.length) card.append(h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`e${e.n}_${s}`, lab, e))));
+  if (e.p.length) card.append(h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`e${e.n}_${s}`, lab, e, true))));
   if (e.opts) {
     card.append(segField({ k: `e${e.n}`, opts: e.opts, stack: 1, tone: 1, onpick: () => delete D()[`_auto_e${e.n}`] }));
     for (const [k, lab, cond] of e.notes || []) {
@@ -590,6 +591,7 @@ function essaiCard(e) {
     if (e.p.length) {
       const det = h('details', {}, h('summary', {}, 'Pressions après réparation'), h('div', { class: 'press' }, e.p.map(([s, lab]) => pressInput(`r${e.n}_${s}`, lab))));
       if (e.p.some(([s]) => D()[`r${e.n}_${s}`]) || (D()[`e${e.n}`] && D()[`e${e.n}`] !== 'ok')) det.open = true;
+      detailsAuto.push([det, (d) => d[`e${e.n}`] && d[`e${e.n}`] !== e.opts[0][0]]);
       card.append(det);
     }
   }
@@ -599,8 +601,8 @@ function essaiCard(e) {
   }
   return card;
 }
-function pressInput(k, lab, essai) {
-  const input = h('input', { type: 'text', inputmode: 'decimal', value: D()[k] ?? '', 'aria-label': lab + ' (bar)', placeholder: 'bar',
+function pressInput(k, lab, essai, required) {
+  const input = h('input', { type: 'text', name: k, inputmode: 'decimal', value: D()[k] ?? '', 'aria-label': lab + ' (bar)', placeholder: 'bar',
     oninput: (ev) => {
       setVal(k, ev.target.value);
       if (essai && essai.auto) { // proposition automatique du résultat tant que l'utilisateur n'a pas choisi
@@ -612,7 +614,7 @@ function pressInput(k, lab, essai) {
         }
       }
     } });
-  return h('div', { class: 'prefix' }, h('span', {}, lab + ' ='), input);
+  return h('div', { class: 'prefix' }, h('span', {}, lab + ' =', required ? h('span', { class: 'req' }, ' *') : null), input);
 }
 
 let timer = null;
@@ -729,7 +731,31 @@ function collectRequiredFields(fields) {
   }
   return out;
 }
+// Essai : pressions relevées obligatoires ; si le résultat n'est pas conforme (≠ 1re option),
+// la réparation et les pressions après réparation deviennent obligatoires avant de continuer.
+function essaiMissingFields(step) {
+  const e = step.essai, d = D(), missing = [];
+  for (const [sfx, lab] of e.p) {
+    const k = `e${e.n}_${sfx}`;
+    if (d[k] == null || d[k] === '') missing.push({ label: lab, k });
+  }
+  if (e.opts) {
+    const val = d[`e${e.n}`];
+    if (val == null || val === '') missing.push({ label: 'Résultat', k: `e${e.n}` });
+    else if (val !== e.opts[0][0]) {
+      for (const [sfx, lab] of e.p) {
+        const k = `r${e.n}_${sfx}`;
+        if (d[k] == null || d[k] === '') missing.push({ label: `${lab} après réparation`, k });
+      }
+      for (const [k, lab, cond] of e.notes || []) {
+        if (cond(val) && (d[k] == null || d[k] === '')) missing.push({ label: lab, k });
+      }
+    }
+  }
+  return missing;
+}
 function stepMissingFields(step) {
+  if (step.parent === 'essais') return essaiMissingFields(step);
   if (!step.section) return [];
   const d = D();
   const missing = collectRequiredFields(step.section.fields).filter((f) => {
@@ -844,7 +870,7 @@ function renderBottomBar() {
     : h('button', { class: 'btn primary', type: 'button', onclick: goNext }, 'Suivant'));
 }
 function renderStep() {
-  conditional.length = 0; sigSetups = []; idc = 0;
+  conditional.length = 0; detailsAuto.length = 0; sigSetups = []; idc = 0;
   steps = computeSteps();
   if (stepIndex >= steps.length) stepIndex = steps.length - 1;
   if (stepIndex < 0) stepIndex = 0;
@@ -862,6 +888,7 @@ function renderStep() {
 function afterChange(k) {
   const d = D();
   for (const [el, when] of conditional) el.hidden = !when(d);
+  for (const [el, shouldOpen] of detailsAuto) if (shouldOpen(d)) el.open = true;
   if (k === 'typeFiche' || k === 'adressePose' || k === 'verifDate' || k == null) updateTitle();
   renderChips();
 }
