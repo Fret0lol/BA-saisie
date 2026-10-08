@@ -61,7 +61,7 @@ button { cursor: pointer; }
   padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--line);
 }
 .top-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px 6px; max-width: 760px; margin: 0 auto; }
-.brand { width: 34px; height: 30px; flex: none; }
+.brand { width: 34px; height: 34px; flex: none; border-radius: 8px; background: #fff; }
 .title { flex: 1; min-width: 0; }
 .title h1 { font-size: 17px; margin: 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title .sub { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; white-space: nowrap; overflow: hidden; }
@@ -71,15 +71,16 @@ button { cursor: pointer; }
 .offline { display: none; color: var(--ink); background: var(--hex); border-radius: 4px; padding: 0 6px; font-weight: 700; font-size: 12px; }
 body.is-offline .offline { display: inline; }
 
-nav.chips { display: flex; gap: 6px; overflow-x: auto; padding: 6px 16px 10px; max-width: 760px; margin: 0 auto; scrollbar-width: none; }
-nav.chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-size: 14px; text-decoration: none; color: var(--ink); white-space: nowrap; }
+nav.chips { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 16px 10px; max-width: 760px; margin: 0 auto; }
+nav.chips:empty { display: none; }
+.chip { min-width: 0; max-width: 100%; justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-size: 14px; color: var(--ink); white-space: nowrap; cursor: pointer; }
 .chip.word { padding: 0 12px; }
+.chip.prev { padding-left: 8px; }
+.chip.next { justify-self: end; padding: 0 8px 0 10px; }
+.chip.current { justify-self: center; cursor: default; box-shadow: 0 0 0 2px var(--petrol) inset; font-weight: 700; }
+.chip .lbl { overflow: hidden; text-overflow: ellipsis; }
+.chip .arrow { color: var(--muted); font-size: 18px; line-height: 1; }
 .chip .hx { width: 26px; height: 24px; font-size: 13px; }
-.chip.filled { border-color: var(--petrol); }
-.chip.filled::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--petrol); }
-.chip.current { box-shadow: 0 0 0 2px var(--petrol) inset; font-weight: 700; }
-.chip:disabled { opacity: .4; }
 #stepCounter { color: var(--muted); }
 
 /* Hexagone de section : reprend le repère « BA » de la fiche papier */
@@ -111,6 +112,9 @@ input[type=text], input[type=tel], input[type=email], input[type=date], input[ty
   width: 100%; min-height: var(--tap); padding: 10px 12px; font-size: 17px;
   border: 1.5px solid var(--line); border-radius: 8px; background: var(--field);
 }
+select { width: 100%; min-height: var(--tap); padding: 10px 12px; font-size: 17px; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 8px; background: var(--field); }
+select:focus { border-color: var(--petrol); outline: none; }
 input[type=date] { appearance: none; -webkit-appearance: none; display: block; }
 textarea { min-height: 110px; resize: vertical; }
 input:focus, textarea:focus { border-color: var(--petrol); outline: none; background: var(--paper); }
@@ -207,6 +211,10 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
 .fiche-item.current { border-color: var(--petrol); border-width: 2px; }
 .fiche-item b { display: block; }
 .fiche-item small { color: var(--muted); }
+.fiche-item small.progress { display: block; margin-top: 2px; color: var(--petrol); font-weight: 700; }
+.device-item { display: flex; align-items: center; gap: 8px; }
+.device-item > div { flex: 1; min-width: 0; }
+.device-item .icon-action { flex: none; }
 .toast { position: fixed; left: 50%; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-size: 15px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
 .toast.show { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -215,7 +223,7 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
 <body>
 <header class="top">
   <div class="top-row">
-    <svg class="brand" viewBox="0 0 34 30" aria-hidden="true"><polygon points="8.5,1 25.5,1 33,15 25.5,29 8.5,29 1,15" fill="var(--hex)" stroke="var(--ink)" stroke-width="1.5"/><text x="17" y="19.5" text-anchor="middle" font-size="12" font-weight="700" fill="#15232B" font-family="Atkinson, sans-serif">BA</text></svg>
+    <img class="brand" src="icons/logo.png" alt="Dyskia">
     <div class="title">
       <h1 id="ficheTitle">Nouvelle fiche</h1>
       <div class="sub"><span id="ficheType">Type à choisir</span><span id="stepCounter"></span><span class="offline">Hors ligne</span><span class="saved" id="saved"></span></div>
@@ -236,8 +244,9 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
   <p class="fname" id="pdfName"></p>
   <div id="pdfWarn"></div>
   <div class="stack">
-    <button class="btn primary" id="btnShare" type="button">Partager ou envoyer par mail</button>
-    <button class="btn" id="btnSave" type="button">Enregistrer sur l’appareil</button>
+    <button class="btn primary" id="btnSaveQuit" type="button">Enregistrer et quitter</button>
+    <button class="btn" id="btnShare" type="button">Partager ou envoyer par mail</button>
+    <button class="btn" id="btnSave" type="button">Télécharger sur l’appareil</button>
     <button class="btn" id="btnOpen" type="button">Ouvrir le PDF</button>
     <button class="btn small" id="btnClosePdf" type="button">Revenir à la saisie</button>
   </div>
@@ -284,7 +293,7 @@ const SECTIONS = [
     T('entreprise', 'Entreprise', { required: 1 }),
     { t: 'row', fields: [T('entrepriseTel', 'Téléphone', { type: 'tel', required: 1 }), T('entrepriseMail', 'Mail', { type: 'email', required: 1 })] },
     T('entrepriseAdresse', 'Adresse de l’entreprise', { required: 1 }),
-    { t: 'action', label: 'Réutiliser mes infos pour les prochaines fiches', act: 'saveProfile', hint: 'Vérificateur, entreprise et appareillage de contrôle seront préremplis.' },
+    { t: 'action', label: 'Réutiliser mes infos pour les prochaines fiches', act: 'saveProfile', hint: 'Vérificateur et entreprise seront préremplis.' },
   ] },
   { id: 's3', num: 3, title: 'Identification du disconnecteur', fields: [
     { t: 'row', fields: [T('marque', 'Marque', { required: 1 }), T('typeDisc', 'Type', { required: 1 })] },
@@ -325,11 +334,11 @@ const SECTIONS = [
   ] },
   { id: 's8', num: 8, title: 'Risque sanitaire avéré', oneOf: { keys: ['origChoix', 'origPose', 'origFonct', 'origLocal'], when: eq('risque', 'oui'), label: 'Origine' }, fields: [
     SEG('risque', 'Risque sanitaire avéré', YN, { required: 1 }),
-    { t: 'label', label: 'Origine (une seule case)', when: eq('risque', 'oui') },
-    CHK('origChoix', 'Choix non adapté (avis de mise en service)', { when: eq('risque', 'oui'), group: 'origine' }),
-    CHK('origPose', 'Pose non conforme', { when: eq('risque', 'oui'), group: 'origine' }),
-    CHK('origFonct', 'Fonctionnement non conforme', { when: eq('risque', 'oui'), group: 'origine' }),
-    CHK('origLocal', 'Local non conforme', { when: eq('risque', 'oui'), group: 'origine' }),
+    { t: 'label', label: 'Origine (une ou plusieurs cases)', when: eq('risque', 'oui') },
+    CHK('origChoix', 'Choix non adapté (avis de mise en service)', { when: eq('risque', 'oui') }),
+    CHK('origPose', 'Pose non conforme', { when: eq('risque', 'oui') }),
+    CHK('origFonct', 'Fonctionnement non conforme', { when: eq('risque', 'oui') }),
+    CHK('origLocal', 'Local non conforme', { when: eq('risque', 'oui') }),
     T('risqueObs', 'Observations', { when: eq('risque', 'oui'), required: 1 }),
   ] },
   { id: 's9', num: 9, title: 'Tests : constats avant manœuvre', intro: 'Prendre toutes les précautions avant de procéder aux tests.', fields: [
@@ -337,16 +346,18 @@ const SECTIONS = [
     T('autresFuites', 'Autres fuites', { hint: 'couvercle, raccords…' }),
     SEG('v1Initial', 'Position initiale de V1', [['ouverte', 'Ouverte'], ['fermee', 'Fermée']]),
     SEG('v2Initial', 'Position initiale de V2', [['ouverte', 'Ouverte'], ['fermee', 'Fermée']]),
-    CHK('fermerVannes', 'V1 et V2 fermées si elles ne l’étaient pas'),
+    CHK('fermerVannes', 'Fermer V1 et V2'),
     CHK('filtreNettoye', 'Filtre démonté et nettoyé'),
     T('etatFiltre', 'État du filtre'),
   ] },
   { id: 'essais', chip: 'Essais', tag: 'Verso', title: 'Essais', intro: 'Initialiser et brancher l’appareillage de contrôle. Pressions en bar.', fields: [{ t: 'essais' }] },
   { id: 'app', chip: 'Appareillage', tag: 'Verso', title: 'Appareillage de contrôle', intro: 'Réf. NF P43-018', fields: [
+    { t: 'devicePick' },
     { t: 'row', fields: [T('appMarque', 'Marque'), T('appType', 'Type / réf.')] },
     T('appSerie', 'N° de série'),
     T('appDate', 'Date de dernière vérification', { type: 'date' }),
     SEG('appLogoNF', 'Logo NF', YN),
+    { t: 'action', label: 'Enregistrer cet appareil', act: 'saveDevice', hint: 'Il sera proposé dans la liste sur les prochaines fiches.' },
   ] },
   { id: 'mesAno', chip: 'Mise en service', tag: 'Verso', title: 'Lors de la mise en service', intro: 'Cocher, le cas échéant, l’anomalie.', fields: [
     CHK('anoPression', 'Pression en amont < 1 bar mini'),
@@ -422,7 +433,8 @@ const FIELD_META = {};
 })(SECTIONS.flatMap((s) => s.fields));
 
 const PROFILE_KEYS = ['verificateur', 'competences', 'certificat', 'certifExpiration', 'entreprise', 'entrepriseTel', 'entrepriseAdresse', 'entrepriseMail',
-  'appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF', 'verifNom', 'sigVerif'];
+  'verifNom', 'sigVerif'];
+const DEVICE_KEYS = ['appMarque', 'appType', 'appSerie', 'appDate', 'appLogoNF'];
 
 /* =====================================================================
    Stockage local (hors ligne)
@@ -437,9 +449,23 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 let fiches = store.get('ba.fiches', {});
 let current = null; // { id, created, updated, data }
 
+/* Appareils de contrôle enregistrés : [{ id, used, appMarque, appType, appSerie, appDate, appLogoNF }] */
+let devices = store.get('ba.devices', null);
+if (!devices) {
+  // Ancienne version : un seul appareil rangé dans le profil
+  const profile = store.get('ba.profile', {}), dev = { id: uid(), used: Date.now() };
+  DEVICE_KEYS.forEach((k) => { if (profile[k]) dev[k] = profile[k]; delete profile[k]; });
+  devices = dev.appMarque || dev.appType || dev.appSerie ? [dev] : [];
+  store.set('ba.devices', devices); store.set('ba.profile', profile);
+}
+const deviceName = (v) => [v.appMarque, v.appType].filter(Boolean).join(' ') + (v.appSerie ? ` — n° ${v.appSerie}` : '') || 'Appareil sans nom';
+const sameDevice = (a, b) => a.appSerie || b.appSerie ? a.appSerie === b.appSerie : a.appMarque === b.appMarque && a.appType === b.appType;
+const lastDevice = () => devices.slice().sort((a, b) => b.used - a.used)[0];
+function deviceFields(v = {}) { const o = {}; DEVICE_KEYS.forEach((k) => { if (v[k]) o[k] = v[k]; }); return o; }
+
 function newFiche(base = {}) {
   const profile = store.get('ba.profile', {});
-  const f = { id: uid(), created: Date.now(), updated: Date.now(), data: { ...profile, verifDate: today(), respDate: today(), ...base } };
+  const f = { id: uid(), created: Date.now(), updated: Date.now(), data: { ...profile, ...deviceFields(lastDevice()), verifDate: today(), respDate: today(), ...base } };
   fiches[f.id] = f; persist(); return f;
 }
 function persist() { store.set('ba.fiches', fiches); if (current) store.set('ba.current', current.id); }
@@ -542,13 +568,7 @@ function checkField(f) {
     onchange: (e) => {
       setVal(f.k, e.target.checked);
       e.target.classList.remove('invalid');
-      if (f.group && e.target.checked) { // une seule case du groupe à la fois
-        $('#form').querySelectorAll(`input[data-group="${f.group}"]`).forEach((other) => {
-          if (other !== e.target && other.checked) { other.checked = false; setVal(other.name, false); other.classList.remove('invalid'); }
-        });
-      }
     } });
-  if (f.group) input.dataset.group = f.group;
   return h('label', { class: 'check field' }, input, h('span', {}, f.label, f.required ? h('span', { class: 'req' }, ' *') : null));
 }
 
@@ -692,6 +712,21 @@ function piecesBlock() {
   return box;
 }
 
+function devicePick() {
+  if (!devices.length) return h('p', { class: 'card-intro' }, 'Aucun appareil enregistré : remplissez les champs puis touchez « Enregistrer cet appareil ».');
+  const id = 'f' + (idc++);
+  const d = D(), match = devices.find((v) => sameDevice(v, d) && (d.appSerie || d.appMarque || d.appType));
+  const sel = h('select', { id, onchange: (e) => {
+      const v = devices.find((x) => x.id === e.target.value);
+      DEVICE_KEYS.forEach((k) => setVal(k, v ? v[k] : '', false));
+      if (v) { v.used = Date.now(); store.set('ba.devices', devices); }
+      DEVICE_KEYS.forEach((k) => afterChange(k)); scheduleSave(); renderStep();
+    } },
+    h('option', { value: '' }, match ? 'Autre appareil (saisie manuelle)' : 'Choisir un appareil…'),
+    devices.slice().sort((a, b) => b.used - a.used).map((v) => h('option', { value: v.id, selected: match && match.id === v.id }, deviceName(v))));
+  return h('div', { class: 'field' }, h('label', { for: id }, 'Appareil enregistré'), sel);
+}
+
 function renderField(f) {
   let el;
   switch (f.t) {
@@ -704,6 +739,7 @@ function renderField(f) {
     case 'label': el = h('div', { class: 'field lab' }, f.label); break;
     case 'alert': el = h('div', { class: 'alert' }, f.text); break;
     case 'pieces': el = piecesBlock(); break;
+    case 'devicePick': el = devicePick(); break;
     case 'action': el = h('div', { class: 'field' }, h('button', { type: 'button', class: 'btn small', onclick: () => actions[f.act]() }, f.label), f.hint ? h('p', { class: 'note-star' }, f.hint) : null); break;
   }
   if (f.when) conditional.push([el, f.when]);
@@ -727,10 +763,10 @@ let steps = [];
 let stepIndex = 0;
 let activeTab = 'fiche'; // 'fiche' | 'fiches' | 'settings'
 
-function computeSteps() {
+function computeSteps(d = D()) {
   const out = [];
   for (const s of SECTIONS) {
-    if (!sectionVisible(s.id)) continue;
+    if (!sectionVisible(s.id, d)) continue;
     if (s.id === 'essais') { for (const e of ESSAIS) out.push({ id: `essai-${e.n}`, parent: 'essais', section: s, essai: e }); }
     else out.push({ id: s.id, section: s });
   }
@@ -829,14 +865,6 @@ function goPrev() {
   if (stepIndex > 0) stepIndex--;
   renderStep();
 }
-function goToStep(id) {
-  steps = computeSteps();
-  const idx = steps.findIndex((s) => s.id === id);
-  if (idx === -1) return;
-  if (!stepUnlocked(idx)) { toast('Terminez d’abord les étapes précédentes.'); return; }
-  stepIndex = idx;
-  renderStep();
-}
 
 function renderSectionCard(s) {
   const head = h('div', { class: 'card-head' },
@@ -849,7 +877,8 @@ function renderEssaiStep(step) {
   const s = step.section, e = step.essai;
   const head = h('div', { class: 'card-head' }, h('h2', {}, s.title), h('span', { class: 'tag' }, s.tag || 'Verso'));
   const sub = h('p', { class: 'card-intro' }, `Essai ${e.n} sur ${ESSAIS.length}` + (e.n === 1 && s.intro ? ' — ' + s.intro : ''));
-  const card = h('section', { class: 'card', 'aria-label': s.title + ' — essai ' + e.n }, head, sub, essaiCard(e));
+  const desc = e.n >= 10 ? h('p', { class: 'card-intro' }, 'Si une ou plusieurs Δp sont mauvaise(s), reprendre les essais 5, 6, 7 et si la ou les mêmes anomalies persistent dans les Δp envisager dans les meilleurs délais le remplacement du disconnecteur - NE PAS METTRE DE BIPASSE SANS PROTECTION ÉQUIVALENTE.') : null;
+  const card = h('section', { class: 'card', 'aria-label': s.title + ' — essai ' + e.n }, head, sub, desc, essaiCard(e));
   if (e.n === 12) {
     const al = h('div', { class: 'alert' }, 'Un ou plusieurs Δp sont mauvais : reprendre les essais 5, 6 et 7. Si les mêmes anomalies persistent, envisager dans les meilleurs délais le remplacement du disconnecteur. Ne pas mettre de bipasse sans protection équivalente.');
     conditional.push([al, (d) => ['e10', 'e11', 'e12'].some((k) => d[k] === 'ko')]);
@@ -857,40 +886,37 @@ function renderEssaiStep(step) {
   }
   return card;
 }
+const stepLabel = (step) => step.essai ? step.essai.g : step.section.num ? shortTitle(step.section) : step.section.chip;
+// Étape où la fiche a été laissée, pour la liste Mes fiches
+function ficheProgress(d) {
+  const all = computeSteps(d), i = Math.max(0, all.findIndex((s) => s.id === d._step));
+  return `Étape ${i + 1} / ${all.length} : ${stepLabel(all[i])}`;
+}
 function renderChips() {
   steps = computeSteps();
   const chips = $('#chips'); chips.innerHTML = '';
-  const d = D();
-  const addChip = (firstId, node) => {
-    const idx = steps.findIndex((s) => s.id === firstId);
-    if (idx === -1) return;
-    const unlocked = stepUnlocked(idx);
-    const isCurrent = steps[stepIndex] && (steps[stepIndex].id === firstId || (firstId === 'essai-1' && steps[stepIndex].parent === 'essais'));
-    node.classList.toggle('current', !!isCurrent);
-    if (!unlocked) node.disabled = true;
-    node.addEventListener('click', () => goToStep(firstId));
-    chips.append(node);
+  const chipFor = (step, dir) => {
+    const s = step.section;
+    const label = stepLabel(step);
+    const content = [
+      dir === 'prev' ? h('span', { class: 'arrow', 'aria-hidden': 'true' }, '‹') : null,
+      s.num ? h('span', { class: 'hx' }, String(s.num)) : null,
+      h('span', { class: 'lbl' }, label),
+      dir === 'next' ? h('span', { class: 'arrow', 'aria-hidden': 'true' }, '›') : null];
+    if (dir === 'current') return h('span', { class: 'chip current' + (s.num ? '' : ' word'), 'aria-current': 'step' }, ...content);
+    return h('button', { type: 'button', class: 'chip ' + dir + (s.num ? '' : ' word'),
+      'aria-label': (dir === 'prev' ? 'Étape précédente : ' : 'Étape suivante : ') + label,
+      onclick: dir === 'prev' ? goPrev : goNext }, ...content);
   };
-  for (const s of SECTIONS) {
-    if (!sectionVisible(s.id)) continue;
-    const firstId = s.id === 'essais' ? 'essai-1' : s.id;
-    const keys = s.id === 'essais' ? ESSAIS.map((e) => `e${e.n}`) : s.id === 'pieces' ? [1, 2, 3, 4, 5].map((i) => `piece${i}`) : keysOf(s);
-    const filled = keys.some((k) => d[k] != null && d[k] !== '');
-    let label = s.num ? shortTitle(s) : s.chip;
-    if (s.id === 'essais' && steps[stepIndex] && steps[stepIndex].parent === 'essais') label = steps[stepIndex].essai.g;
-    const chip = h('button', { type: 'button', class: 'chip' + (s.num ? '' : ' word') + (filled ? ' filled' : '') },
-      s.num ? h('span', { class: 'hx' }, String(s.num)) : null, label);
-    addChip(firstId, chip);
-  }
+  const slot = (step, dir) => step ? chipFor(step, dir) : h('span');
+  if (steps[stepIndex]) chips.append(slot(steps[stepIndex - 1], 'prev'), slot(steps[stepIndex], 'current'), slot(steps[stepIndex + 1], 'next'));
   if (steps[stepIndex]) $('#stepCounter').textContent = `Étape ${stepIndex + 1} / ${steps.length}`;
-  const cur = chips.querySelector('.chip.current');
-  if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
 function renderBottomBar() {
   const bar = $('#bottomBar'); bar.innerHTML = '';
   const isLast = stepIndex === steps.length - 1;
   if (stepIndex > 0) bar.append(h('button', { class: 'btn', type: 'button', onclick: goPrev }, 'Précédent'));
-  if (!isLast) bar.append(h('button', { class: 'btn', type: 'button', 'aria-label': 'Aperçu du PDF rempli', onclick: (e) => generate(e.currentTarget) }, 'Aperçu'));
+  if (!isLast) bar.append(h('button', { class: 'btn', type: 'button', 'aria-label': 'Enregistrer : PDF rempli', onclick: (e) => generate(e.currentTarget) }, 'Enregistrer'));
   bar.append(isLast
     ? h('button', { class: 'btn primary', type: 'button', onclick: (e) => generate(e.currentTarget) }, 'Générer le PDF')
     : h('button', { class: 'btn primary', type: 'button', onclick: goNext }, 'Suivant'));
@@ -914,17 +940,17 @@ function renderStep() {
 /* ---------- Pages (Fiche / Mes fiches / Paramètres) et barre d'onglets ---------- */
 function renderPage() {
   $('#chips').hidden = activeTab !== 'fiche';
-  $('#wizardBar').hidden = activeTab !== 'fiche';
+  $('#wizardBar').hidden = activeTab !== 'fiche' && !(activeTab === 'settings' && editingDevice);
   if (activeTab === 'fiche') { updateTitle(); renderStep(); } else {
     $('#chips').innerHTML = '';
-    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : 'Paramètres';
+    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : editingDevice ? 'Modifier l’appareil' : 'Paramètres';
     $('#ficheType').textContent = ''; $('#stepCounter').textContent = ''; $('#saved').style.opacity = 0;
     if (activeTab === 'fiches') renderFichesPage(); else renderSettingsPage();
   }
   renderTabbar();
   window.scrollTo(0, 0);
 }
-function switchTab(tab) { activeTab = tab; renderPage(); }
+function switchTab(tab) { activeTab = tab; editingDevice = null; renderPage(); }
 function renderTabbar() {
   const bar = $('#tabbar'); bar.innerHTML = '';
   const items = [['fiche', 'doc', 'Fiche'], ['fiches', 'list', 'Mes fiches'], ['settings', 'gear', 'Paramètres']];
@@ -987,6 +1013,21 @@ const actions = {
     if (!p.verifNom && D().verificateur) p.verifNom = D().verificateur;
     store.set('ba.profile', p); toast('Vos infos seront préremplies sur les prochaines fiches.');
   },
+  saveDevice() {
+    const v = deviceFields(D());
+    if (!v.appMarque && !v.appType && !v.appSerie) { toast('Renseignez au moins la marque, le type ou le n° de série.'); return; }
+    const old = devices.find((x) => sameDevice(x, v));
+    if (old) {
+      const changed = DEVICE_KEYS.filter((k) => (old[k] || '') !== (v[k] || ''));
+      if (!changed.length) { toast('Cet appareil est déjà enregistré.'); return; }
+      if (!confirm(`« ${deviceName(old)} » est déjà enregistré.\nModifier : ${changed.map((k) => FIELD_META[k].label).join(', ')} ?`)) return;
+    }
+    if (old) { DEVICE_KEYS.forEach((k) => delete old[k]); Object.assign(old, v, { used: Date.now() }); }
+    else devices.push({ id: uid(), used: Date.now(), ...v });
+    store.set('ba.devices', devices);
+    toast(old ? 'Appareil mis à jour.' : 'Appareil enregistré.');
+    renderStep();
+  },
 };
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -994,22 +1035,22 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 /* ---------- Paramètres : profil vérificateur, modifiable sans ouvrir de fiche ---------- */
 let profileDraft = {};
 let profileSigSetups = [];
-function profileField(f) {
+function profileField(f, draft = profileDraft, rerender = renderProfileForm) {
   if (f.t === 'sig') {
-    return sigField({ ...f, required: false }, () => profileDraft[f.k], (v) => { if (v) profileDraft[f.k] = v; else delete profileDraft[f.k]; }, profileSigSetups);
+    return sigField({ ...f, required: false }, () => draft[f.k], (v) => { if (v) draft[f.k] = v; else delete draft[f.k]; }, profileSigSetups);
   }
   if (f.t === 'seg') {
     const group = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': f.label });
     group.append(...f.opts.map(([v, lab]) => {
-      const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(profileDraft[f.k] === v),
-        onclick: () => { profileDraft[f.k] = profileDraft[f.k] === v ? '' : v; renderProfileForm(); } }, lab);
+      const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(draft[f.k] === v),
+        onclick: () => { draft[f.k] = draft[f.k] === v ? '' : v; rerender(); } }, lab);
       b.dataset.v = v; return b;
     }));
     return h('div', { class: 'field' }, h('div', { class: 'lab' }, f.label), group);
   }
   const id = 'pf-' + f.k;
-  const input = h('input', { id, type: f.type === 'date' ? 'date' : (f.type || 'text'), value: profileDraft[f.k] ?? '', autocomplete: 'off',
-    oninput: (e) => { profileDraft[f.k] = e.target.value; } });
+  const input = h('input', { id, type: f.type === 'date' ? 'date' : (f.type || 'text'), value: draft[f.k] ?? '', autocomplete: 'off',
+    oninput: (e) => { draft[f.k] = e.target.value; } });
   return h('div', { class: 'field' }, h('label', { for: id }, f.label), input);
 }
 function renderProfileForm() {
@@ -1023,14 +1064,64 @@ function saveProfileDraft() {
   store.set('ba.profile', p); toast('Informations enregistrées pour vos prochaines fiches.');
 }
 function renderSettingsPage() {
+  if (editingDevice) { renderDeviceEditPage(); return; }
   profileDraft = { ...store.get('ba.profile', {}) };
   const main = $('#form'); main.innerHTML = '';
   main.append(h('section', { class: 'card' },
     h('div', { class: 'card-head' }, h('h2', {}, 'Mes informations')),
-    h('p', { class: 'card-intro' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, appareillage de contrôle, signature).'),
+    h('p', { class: 'card-intro' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, signature).'),
     h('div', { id: 'profileForm' }),
     h('div', { class: 'row-actions' }, h('button', { type: 'button', class: 'btn primary', onclick: saveProfileDraft }, 'Enregistrer'))));
   renderProfileForm();
+  main.append(h('section', { class: 'card' },
+    h('div', { class: 'card-head' }, h('h2', {}, 'Mes appareils de contrôle')),
+    h('p', { class: 'card-intro' }, 'Proposés dans la liste de l’étape « Appareillage de contrôle ». Le dernier utilisé est prérempli sur les nouvelles fiches.'),
+    h('div', { id: 'deviceList' })));
+  renderDeviceList();
+}
+let editingDevice = null, deviceDraft = {};
+function saveDeviceEdit(v) {
+  const d = deviceFields(deviceDraft);
+  if (!d.appMarque && !d.appType && !d.appSerie) { toast('Renseignez au moins la marque, le type ou le n° de série.'); return; }
+  if (devices.some((x) => x !== v && sameDevice(x, d))) { toast('Un autre appareil enregistré a déjà ce n° de série.'); return; }
+  DEVICE_KEYS.forEach((k) => delete v[k]); Object.assign(v, d);
+  store.set('ba.devices', devices); closeDeviceEdit(); toast('Appareil mis à jour.');
+}
+function openDeviceEdit(v) { editingDevice = v.id; deviceDraft = { ...v }; renderPage(); }
+function closeDeviceEdit() { editingDevice = null; renderPage(); }
+function renderDeviceEditPage() {
+  const v = devices.find((x) => x.id === editingDevice);
+  if (!v) { editingDevice = null; renderSettingsPage(); return; }
+  const main = $('#form'); main.innerHTML = '';
+  const form = h('div');
+  const renderForm = () => { form.innerHTML = ''; form.append(...DEVICE_KEYS.map((k) => profileField(FIELD_META[k], deviceDraft, renderForm))); };
+  renderForm();
+  main.append(
+    h('button', { type: 'button', class: 'btn small', onclick: closeDeviceEdit }, '‹ Paramètres'),
+    h('section', { class: 'card', style: 'margin-top:12px' },
+      h('div', { class: 'card-head' }, h('h2', {}, deviceName(v))),
+      h('p', { class: 'card-intro' }, 'Les fiches déjà remplies ne sont pas modifiées.'),
+      form));
+  // Même barre fixe en bas d'écran que Précédent / Suivant dans la fiche
+  $('#bottomBar').replaceChildren(
+    h('button', { type: 'button', class: 'btn', onclick: closeDeviceEdit }, 'Annuler'),
+    h('button', { type: 'button', class: 'btn primary', onclick: () => saveDeviceEdit(v) }, 'Enregistrer'));
+}
+function renderDeviceList() {
+  const box = $('#deviceList'); box.innerHTML = '';
+  if (!devices.length) box.append(h('p', {}, 'Aucun appareil enregistré. Ajoutez-en un depuis une fiche, à l’étape « Appareillage de contrôle ».'));
+  for (const v of devices.slice().sort((a, b) => b.used - a.used)) {
+    const date = v.appDate ? new Date(v.appDate + 'T00:00').toLocaleDateString('fr-FR') : null;
+    box.append(h('div', { class: 'fiche-item device-item' },
+      h('div', {},
+        h('b', {}, deviceName(v)),
+        h('small', {}, (date ? `Dernière vérification le ${date}` : 'Date de vérification non renseignée') + (v.appLogoNF === 'oui' ? ', logo NF' : ''))),
+      h('button', { type: 'button', class: 'icon-action', 'aria-label': 'Modifier', title: 'Modifier', onclick: () => openDeviceEdit(v) }, icon('pencil')),
+      h('button', { type: 'button', class: 'icon-action danger', 'aria-label': 'Supprimer', title: 'Supprimer', onclick: () => {
+          if (!confirm('Supprimer cet appareil de la liste ?')) return;
+          devices = devices.filter((x) => x !== v); store.set('ba.devices', devices); renderDeviceList();
+        } }, icon('trash'))));
+  }
 }
 
 function openFiche(id) { current = fiches[id]; persist(); enterFiche(); }
@@ -1057,6 +1148,7 @@ function renderFichesPage() {
     list.append(h('div', { class: 'fiche-item' + (f.id === current.id ? ' current' : '') },
       h('b', {}, ficheDisplayName(f)),
       h('small', {}, `${TYPES[d.typeFiche] || 'Type non choisi'}, modifiée le ${when}`),
+      h('small', { class: 'progress' }, ficheProgress(d)),
       h('div', { class: 'icon-actions' },
         f.id === current.id ? null : h('button', { type: 'button', class: 'icon-action primary', 'aria-label': 'Ouvrir', title: 'Ouvrir', onclick: () => openFiche(f.id) }, icon('open')),
         h('button', { type: 'button', class: 'icon-action', 'aria-label': 'Renommer', title: 'Renommer', onclick: () => renameFiche(f) }, icon('pencil')),
@@ -1097,7 +1189,11 @@ async function generate(btn, data) {
     $('#pdfWarn').innerHTML = ''; warn.forEach((w) => $('#pdfWarn').append(h('div', { class: 'warn' }, w)));
     const canShare = navigator.canShare && navigator.canShare({ files: [pdfFile] });
     $('#btnShare').hidden = !canShare;
-    $('#btnSave').classList.toggle('primary', !canShare);
+    // Bouton principal : Enregistrer et quitter ; ouvert depuis Mes fiches (rien à quitter), le partage ou le téléchargement
+    const fromFiche = activeTab === 'fiche';
+    $('#btnSaveQuit').hidden = !fromFiche;
+    $('#btnShare').classList.toggle('primary', !fromFiche && canShare);
+    $('#btnSave').classList.toggle('primary', !fromFiche && !canShare);
     $('#dlgPdf').showModal();
   } catch (e) {
     console.error(e); toast('Échec de la génération : ' + e.message);
@@ -1106,7 +1202,7 @@ async function generate(btn, data) {
 async function share() {
   try {
     await navigator.share({ files: [pdfFile], title: pdfFile.name, text: 'Fiche disconnecteur BA : ' + pdfAdresse });
-  } catch (e) { if (e.name !== 'AbortError') { toast('Partage impossible, enregistrement du fichier.'); download(); } }
+  } catch (e) { if (e.name !== 'AbortError') { toast('Partage impossible, téléchargement du fichier.'); download(); } }
 }
 function download() {
   const a = h('a', { href: pdfUrl, download: pdfFile.name }); document.body.append(a); a.click(); a.remove();
@@ -1119,6 +1215,10 @@ $('#btnShare').addEventListener('click', share);
 $('#btnSave').addEventListener('click', download);
 $('#btnOpen').addEventListener('click', () => window.open(pdfUrl, '_blank'));
 $('#btnClosePdf').addEventListener('click', () => $('#dlgPdf').close());
+$('#btnSaveQuit').addEventListener('click', () => {
+  clearTimeout(saveTimer); current.updated = Date.now(); fiches[current.id] = current; persist();
+  $('#dlgPdf').close(); switchTab('fiches'); toast('Fiche enregistrée.');
+});
 document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
 $('#form').addEventListener('input', (e) => e.target.classList.remove('invalid'));
 

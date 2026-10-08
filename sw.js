@@ -1,10 +1,10 @@
 // Service worker : met l'application en cache pour un fonctionnement hors ligne.
 // Changer VERSION à chaque mise à jour des fichiers pour forcer le rafraîchissement.
-const VERSION = 'fiche-ba-v22';
+const VERSION = 'fiche-ba-v33';
 const FILES = [
   './', 'index.html', 'fill.js', 'pdf-lib.min.js', 'BA.pdf', 'manifest.webmanifest',
   'fonts/atkinson-hyperlegible-latin-400-normal.woff2', 'fonts/atkinson-hyperlegible-latin-700-normal.woff2',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/logo.png',
 ];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
