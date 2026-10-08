@@ -7,3 +7,4 @@ package.json
 package-lock.json
 .gitignore
 site/
+CHARTE-GRAPHIQUE.md

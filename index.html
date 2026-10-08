@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fiche disconnecteur BA</title>
-<meta name="theme-color" content="#0E5A73">
+<meta name="theme-color" content="#0B3A60">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Fiche BA">
@@ -17,18 +17,30 @@
 @font-face { font-family: "Atkinson"; src: url("fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
 :root {
-  --bg: #E9ECEA;        /* béton clair */
+  /* Charte Dyskia (voir CHARTE-GRAPHIQUE.md) : marine, bleu et lagon du logo */
+  --marine: #0B3A60;
+  --bleu: #0B6AAE;
+  --lagon: #66C2D4;
+  --bg: #EEF3F7;        /* fond bleuté très clair */
   --paper: #FFFFFF;
-  --ink: #15232B;
-  --muted: #5A6A72;
-  --line: #CBD2D0;
-  --petrol: #0E5A73;    /* action principale */
-  --petrol-ink: #FFFFFF;
-  --hex: #F2C230;       /* repères de section, comme les étiquettes de chantier */
-  --hex-ink: #15232B;
+  --ink: #0E2A42;       /* texte : marine assombri */
+  --muted: #546B7F;
+  --line: #CCD9E4;
+  --primary: var(--bleu);  /* action principale */
+  --primary-ink: #FFFFFF;
+  --hex: var(--lagon);  /* repères de section */
+  --hex-ink: var(--marine);
+  --bar: var(--marine); /* barre du haut */
+  --bar-ink: #FFFFFF;
+  --bar-muted: #B7CCDD;
   --ok: #1E7A46; --ok-bg: #E3F2E8;
   --ko: #B3261E; --ko-bg: #FBE7E5;
-  --field: #F6F8F7;
+  --field: #F4F7FA;
+  /* Étiquettes de type de fiche */
+  --t-mes: #0B4A5E; --t-mes-bg: #DDF2F6;
+  --t-maint: #0B4F85; --t-maint-bg: #DCEAF6;
+  --t-dep: #8A3B0B; --t-dep-bg: #FBE9DA;
+  --t-none: #546B7F; --t-none-bg: #E6ECF1;
   --pen: #12338C;
   --radius: 10px;
   --tap: 48px;
@@ -36,9 +48,12 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111A1E; --paper: #1A262B; --ink: #E7EEEC; --muted: #9AABB1; --line: #2F3E44;
-    --petrol: #2E9CC0; --petrol-ink: #06222C; --hex: #F2C230; --hex-ink: #15232B;
-    --ok: #5CC98A; --ok-bg: #173526; --ko: #F2877E; --ko-bg: #3A1D1B; --field: #223137;
+    --bg: #08131F; --paper: #0F2134; --ink: #E4EDF5; --muted: #93A9BC; --line: #23405C;
+    --primary: #5AB0E6; --primary-ink: #04172A; --hex: var(--lagon); --hex-ink: #06202E;
+    --bar: #0F2134; --bar-ink: #E4EDF5; --bar-muted: #93A9BC;
+    --ok: #5CC98A; --ok-bg: #173526; --ko: #F2877E; --ko-bg: #3A1D1B; --field: #15293F;
+    --t-mes: #8FD8E6; --t-mes-bg: #12384A; --t-maint: #9CCBF0; --t-maint-bg: #143454;
+    --t-dep: #F4B98A; --t-dep-bg: #3D2615; --t-none: #93A9BC; --t-none-bg: #1B3047;
     --pen: #12338C;
     color-scheme: dark;
   }
@@ -53,22 +68,22 @@ body {
 button, input, textarea { font: inherit; color: inherit; }
 button svg { vertical-align: -5px; }
 button { cursor: pointer; }
-:focus-visible { outline: 3px solid var(--hex); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--lagon); outline-offset: 2px; }
 
 /* ---------- Barre du haut ---------- */
 .top {
-  position: sticky; top: 0; z-index: 20; background: var(--paper);
+  position: sticky; top: 0; z-index: 20; background: var(--bar); color: var(--bar-ink);
   padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--line);
 }
 .top-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px 6px; max-width: 760px; margin: 0 auto; }
 .brand { width: 34px; height: 34px; flex: none; border-radius: 8px; background: #fff; }
 .title { flex: 1; min-width: 0; }
 .title h1 { font-size: 17px; margin: 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.title .sub { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; white-space: nowrap; overflow: hidden; }
+.title .sub { font-size: 13px; color: var(--bar-muted); display: flex; gap: 8px; align-items: center; white-space: nowrap; overflow: hidden; }
 .title .sub > * { flex: none; }
 #ficheType { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
 .saved { transition: opacity .3s; }
-.offline { display: none; color: var(--ink); background: var(--hex); border-radius: 4px; padding: 0 6px; font-weight: 700; font-size: 12px; }
+.offline { display: none; color: var(--hex-ink); background: var(--hex); border-radius: 4px; padding: 0 6px; font-weight: 700; font-size: 12px; }
 body.is-offline .offline { display: inline; }
 
 nav.chips { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 16px 10px; max-width: 760px; margin: 0 auto; }
@@ -77,11 +92,11 @@ nav.chips:empty { display: none; }
 .chip.word { padding: 0 12px; }
 .chip.prev { padding-left: 8px; }
 .chip.next { justify-self: end; padding: 0 8px 0 10px; }
-.chip.current { justify-self: center; cursor: default; box-shadow: 0 0 0 2px var(--petrol) inset; font-weight: 700; }
+.chip.current { justify-self: center; cursor: default; box-shadow: 0 0 0 2px var(--primary) inset; font-weight: 700; }
 .chip .lbl { overflow: hidden; text-overflow: ellipsis; }
 .chip .arrow { color: var(--muted); font-size: 18px; line-height: 1; }
 .chip .hx { width: 26px; height: 24px; font-size: 13px; }
-#stepCounter { color: var(--muted); }
+#stepCounter { color: var(--bar-muted); }
 
 /* Hexagone de section : reprend le repère « BA » de la fiche papier */
 .hx { display: inline-grid; place-items: center; background: var(--hex); color: var(--hex-ink); font-weight: 700;
@@ -114,10 +129,10 @@ input[type=text], input[type=tel], input[type=email], input[type=date], input[ty
 }
 select { width: 100%; min-height: var(--tap); padding: 10px 12px; font-size: 17px; color: var(--ink);
   border: 1.5px solid var(--line); border-radius: 8px; background: var(--field); }
-select:focus { border-color: var(--petrol); outline: none; }
+select:focus { border-color: var(--primary); outline: none; }
 input[type=date] { appearance: none; -webkit-appearance: none; display: block; }
 textarea { min-height: 110px; resize: vertical; }
-input:focus, textarea:focus { border-color: var(--petrol); outline: none; background: var(--paper); }
+input:focus, textarea:focus { border-color: var(--primary); outline: none; background: var(--paper); }
 .prefix { display: flex; align-items: stretch; }
 .prefix > span { white-space: nowrap; display: flex; align-items: center; padding: 0 10px; border: 1.5px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px; color: var(--muted); font-weight: 700; background: var(--bg); }
 .prefix > span .req { color: var(--ko); }
@@ -126,7 +141,7 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 /* Choix segmentés */
 .seg { display: flex; flex-wrap: wrap; gap: 8px; }
 .seg button { flex: 1 1 auto; min-height: var(--tap); padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--paper); font-size: 16px; }
-.seg button[aria-checked=true] { background: var(--petrol); border-color: var(--petrol); color: var(--petrol-ink); font-weight: 700; }
+.seg button[aria-checked=true] { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); font-weight: 700; }
 .seg.stack { flex-direction: column; }
 .seg.stack button { text-align: left; display: flex; gap: 10px; align-items: center; }
 .seg.stack button::before { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; flex: none; opacity: .6; }
@@ -135,12 +150,12 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .seg.stack button.bad[aria-checked=true] { background: var(--ko-bg); border-color: var(--ko); color: var(--ko); }
 
 .check { display: flex; gap: 12px; align-items: center; min-height: var(--tap); padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 8px; margin-top: 8px; }
-.check input { width: 24px; height: 24px; accent-color: var(--petrol); flex: none; }
-.check:has(input:checked) { border-color: var(--petrol); }
+.check input { width: 24px; height: 24px; accent-color: var(--primary); flex: none; }
+.check:has(input:checked) { border-color: var(--primary); }
 .check:has(input.invalid) { border-color: var(--ko); }
 
-.btn { min-height: var(--tap); padding: 0 18px; border-radius: 8px; border: 1.5px solid var(--petrol); background: var(--paper); color: var(--petrol); font-weight: 700; font-size: 16px; }
-.btn.primary { background: var(--petrol); color: var(--petrol-ink); }
+.btn { min-height: var(--tap); padding: 0 18px; border-radius: 8px; border: 1.5px solid var(--primary); background: var(--paper); color: var(--primary); font-weight: 700; font-size: 16px; }
+.btn.primary { background: var(--primary); color: var(--primary-ink); }
 .btn.danger { border-color: var(--ko); color: var(--ko); }
 .btn.small { min-height: 38px; font-size: 14px; padding: 0 12px; }
 .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -157,7 +172,7 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .timer { margin-top: 10px; }
 .timer.run { background: var(--hex); border-color: var(--hex); color: var(--hex-ink); }
 .essai details { margin-top: 12px; }
-.essai summary { cursor: pointer; color: var(--petrol); font-weight: 700; min-height: 40px; display: flex; align-items: center; }
+.essai summary { cursor: pointer; color: var(--primary); font-weight: 700; min-height: 40px; display: flex; align-items: center; }
 .alert { margin-top: 14px; padding: 12px 14px; border-left: 4px solid var(--ko); background: var(--ko-bg); border-radius: 0 8px 8px 0; font-size: 15px; }
 .alert[hidden] { display: none; }
 .note-star { font-size: 14px; color: var(--muted); margin-top: 6px; }
@@ -187,19 +202,19 @@ input:focus, textarea:focus { border-color: var(--petrol); outline: none; backgr
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-height: 52px; padding: 6px 4px; border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 11px; font-weight: 700; }
 .tab svg { width: 22px; height: 22px; }
-.tab.active { color: var(--petrol); }
+.tab.active { color: var(--primary); }
 
 /* Icônes d'action (listes de fiches) */
 .icon-actions { display: flex; gap: 8px; }
 .icon-action { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
 .icon-action svg { width: 20px; height: 20px; }
-.icon-action.primary { border-color: var(--petrol); color: var(--petrol); }
+.icon-action.primary { border-color: var(--primary); color: var(--primary); }
 .icon-action.danger { border-color: var(--ko); color: var(--ko); }
 
 /* Feuilles modales */
-dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88vh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--paper); color: var(--ink); }
+dialog { overflow: auto; border: 0; padding: 0; width: min(560px, 100%); max-height: 88vh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--paper); color: var(--ink); }
 @media (min-width: 600px) { dialog { margin: auto; border-radius: 16px; } }
-dialog::backdrop { background: rgba(10, 20, 25, .55); }
+dialog::backdrop { background: rgba(6, 22, 38, .6); }
 .sheet { padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px)); }
 .sheet h3 { margin: 0 0 4px; font-size: 20px; }
 .sheet p { margin: 6px 0; color: var(--muted); }
@@ -208,10 +223,76 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
 .warn { color: var(--ko); background: var(--ko-bg); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 15px; }
 .fname { font-weight: 700; color: var(--ink) !important; word-break: break-all; }
 .fiche-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 10px; }
-.fiche-item.current { border-color: var(--petrol); border-width: 2px; }
 .fiche-item b { display: block; }
 .fiche-item small { color: var(--muted); }
-.fiche-item small.progress { display: block; margin-top: 2px; color: var(--petrol); font-weight: 700; }
+/* Mes fiches */
+.fab { position: fixed; z-index: 25; right: max(16px, calc((100vw - 760px) / 2 + 16px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: inline-flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 22px 0 18px; border: 0; border-radius: 16px;
+  background: var(--primary); color: var(--primary-ink); font-size: 17px; font-weight: 700; box-shadow: 0 6px 18px rgba(6, 22, 38, .28); }
+.fab svg { width: 22px; height: 22px; }
+.fab:active { transform: scale(.97); }
+.fsearch { position: relative; }
+.fsearch svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.fsearch input { width: 100%; min-height: var(--tap); padding: 10px 12px 10px 42px; font-size: 16px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); }
+.fsearch input:focus { border-color: var(--primary); outline: none; }
+.fgroup { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 4px 8px; }
+.fcard { display: flex; flex-direction: column; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.fcard.current { border-color: var(--primary); box-shadow: inset 4px 0 0 var(--primary); }
+.fcard-main { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px 10px; border: 0; background: none; color: inherit; text-align: left; }
+.fcard-main:active { background: var(--field); }
+.fcard-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 0 16px 14px; }
+.fcard-actions .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.fcard-actions .btn svg { width: 18px; height: 18px; }
+.fcard-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ftype { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--t-none-bg); color: var(--t-none); }
+.ftype.mes { background: var(--t-mes-bg); color: var(--t-mes); }
+.ftype.maint { background: var(--t-maint-bg); color: var(--t-maint); }
+.ftype.dep { background: var(--t-dep-bg); color: var(--t-dep); }
+.fcur { font-size: 12px; font-weight: 700; color: var(--primary); }
+.fcard-title { font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+.fcard-sub { font-size: 14px; color: var(--muted); }
+.fprog { width: 100%; height: 6px; border-radius: 3px; background: var(--line); margin-top: 6px; overflow: hidden; }
+.fprog i { display: block; height: 100%; border-radius: 3px; background: var(--primary); }
+.fcard-step { font-size: 13px; font-weight: 700; color: var(--ink); }
+.fcard-when { font-size: 13px; color: var(--muted); }
+.empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+.empty img { width: 72px; height: 72px; border-radius: 16px; background: #fff; margin-bottom: 12px; }
+.empty b { display: block; font-size: 18px; color: var(--ink); margin-bottom: 6px; }
+.empty-search { color: var(--muted); text-align: center; margin-top: 24px; }
+.btn.danger { border-color: var(--ko); color: var(--ko); }
+.sheet .btn svg { margin-right: 4px; }
+.osheet { padding-top: 8px; }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 12px; }
+.osheet-head { display: flex; gap: 12px; align-items: flex-start; }
+.osheet-head > div { flex: 1; min-width: 0; }
+.osheet-head h3 { overflow-wrap: anywhere; }
+.osheet-head p { margin: 2px 0 0; font-size: 14px; }
+.osheet-head .icon-action { width: 40px; height: 40px; border: 0; background: var(--field); border-radius: 50%; flex: none; }
+.osec { margin-top: 18px; }
+.osec h4 { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.osec-body { display: grid; gap: 10px; }
+.osec-body p { margin: 0; }
+.osec-body .warn { margin-top: 0; }
+.ofile { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.onote { font-size: 14px; color: var(--ink) !important; background: var(--field); border-radius: 8px; padding: 10px 12px; }
+.osec-body .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.osec-body .sheet-row:has(> :only-child) { grid-template-columns: 1fr; }
+.pdf-wait { color: var(--muted); text-align: center; padding: 14px 0; }
+.back-link { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 8px 0 0; margin: -4px 0 8px; border: 0; background: none; color: var(--primary); font-size: 16px; font-weight: 700; }
+.slist { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.srow { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; padding: 12px 16px; border: 0; background: none; color: var(--ink); text-align: left; }
+.srow + .srow { border-top: 1px solid var(--line); }
+.srow:active { background: var(--field); }
+.srow-ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--t-maint-bg); color: var(--t-maint); flex: none; }
+.srow-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.srow-txt b { font-size: 16px; }
+.srow-txt small { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow > svg:last-child { color: var(--muted); flex: none; }
+.orow { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0 4px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); font-size: 16px; font-weight: 700; text-align: left; }
+.orow:last-child { border-bottom: 1px solid var(--line); }
+.orow svg { color: var(--muted); }
+.orow.danger, .orow.danger svg { color: var(--ko); }
+.sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .device-item { display: flex; align-items: center; gap: 8px; }
 .device-item > div { flex: 1; min-width: 0; }
 .device-item .icon-action { flex: none; }
@@ -239,6 +320,23 @@ dialog::backdrop { background: rgba(10, 20, 25, .55); }
   <nav class="tabbar" id="tabbar" aria-label="Navigation principale"></nav>
 </div>
 
+<dialog id="dlgFiche" aria-labelledby="ficheSheetTitle"><div class="sheet osheet">
+  <div class="grab" aria-hidden="true"></div>
+  <div class="osheet-head">
+    <div><h3 id="ficheSheetTitle"></h3><p id="ficheSheetSub"></p></div>
+    <button type="button" class="icon-action" id="btnCloseFiche" aria-label="Fermer"></button>
+  </div>
+  <div id="ficheSheetActions"></div>
+</div></dialog>
+<dialog id="dlgName" aria-labelledby="nameTitle"><form class="sheet" method="dialog" id="nameForm">
+  <h3 id="nameTitle">Nom de la fiche</h3>
+  <p>Modifiez-le si besoin : c’est sous ce nom qu’elle apparaîtra dans Mes fiches.</p>
+  <input type="text" id="nameInput" autocomplete="off" aria-labelledby="nameTitle" style="margin-top:10px">
+  <div class="stack">
+    <button class="btn primary" id="nameOk" type="submit" value="ok">Enregistrer</button>
+    <button class="btn small" type="submit" value="cancel" formnovalidate>Annuler</button>
+  </div>
+</form></dialog>
 <dialog id="dlgPdf"><div class="sheet">
   <h3 id="pdfTitle">PDF prêt</h3>
   <p class="fname" id="pdfName"></p>
@@ -512,6 +610,15 @@ const ICONS = {
   open: () => svg('path', { d: 'M13 6l6 6-6 6 M5 12h14' }),
   trash: () => svg('path', { d: 'M6 7h12 M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2 M7 7l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12' }),
   eye: () => svg('g', {}, svg('path', { d: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z' }), svg('circle', { cx: 12, cy: 12, r: 3 })),
+  more: () => svg('g', {}, svg('circle', { cx: 5, cy: 12, r: 1.4, fill: 'currentColor' }), svg('circle', { cx: 12, cy: 12, r: 1.4, fill: 'currentColor' }), svg('circle', { cx: 19, cy: 12, r: 1.4, fill: 'currentColor' })),
+  share: () => svg('path', { d: 'M12 3v12 M7 8l5-5 5 5 M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6' }),
+  download: () => svg('path', { d: 'M12 3v12 M7 10l5 5 5-5 M5 21h14' }),
+  close: () => svg('path', { d: 'M6 6l12 12 M18 6L6 18' }),
+  back: () => svg('path', { d: 'M15 6l-6 6 6 6' }),
+  chev: () => svg('path', { d: 'M9 6l6 6-6 6' }),
+  user: () => svg('g', {}, svg('circle', { cx: 12, cy: 8, r: 4 }), svg('path', { d: 'M4 21a8 8 0 0116 0' })),
+  gauge: () => svg('g', {}, svg('path', { d: 'M4 17a8 8 0 1116 0' }), svg('path', { d: 'M12 17l4-5' }), svg('circle', { cx: 12, cy: 17, r: 1.2, fill: 'currentColor' })),
+  search: () => svg('g', {}, svg('circle', { cx: 11, cy: 11, r: 7 }), svg('path', { d: 'M20 20l-4-4' })),
   pencil: () => svg('path', { d: 'M12 20h9 M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z' }),
 };
 function icon(name) {
@@ -890,7 +997,7 @@ const stepLabel = (step) => step.essai ? step.essai.g : step.section.num ? short
 // Étape où la fiche a été laissée, pour la liste Mes fiches
 function ficheProgress(d) {
   const all = computeSteps(d), i = Math.max(0, all.findIndex((s) => s.id === d._step));
-  return `Étape ${i + 1} / ${all.length} : ${stepLabel(all[i])}`;
+  return { n: i + 1, total: all.length, label: stepLabel(all[i]) };
 }
 function renderChips() {
   steps = computeSteps();
@@ -940,17 +1047,18 @@ function renderStep() {
 /* ---------- Pages (Fiche / Mes fiches / Paramètres) et barre d'onglets ---------- */
 function renderPage() {
   $('#chips').hidden = activeTab !== 'fiche';
-  $('#wizardBar').hidden = activeTab !== 'fiche' && !(activeTab === 'settings' && editingDevice);
+  $('#wizardBar').hidden = activeTab !== 'fiche' && !(activeTab === 'settings' && (editingDevice || settingsView === 'profile'));
   if (activeTab === 'fiche') { updateTitle(); renderStep(); } else {
     $('#chips').innerHTML = '';
-    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : editingDevice ? 'Modifier l’appareil' : 'Paramètres';
+    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : editingDevice ? 'Modifier l’appareil'
+      : settingsView === 'profile' ? 'Mes informations' : settingsView === 'devices' ? 'Mes appareils de contrôle' : 'Paramètres';
     $('#ficheType').textContent = ''; $('#stepCounter').textContent = ''; $('#saved').style.opacity = 0;
     if (activeTab === 'fiches') renderFichesPage(); else renderSettingsPage();
   }
   renderTabbar();
   window.scrollTo(0, 0);
 }
-function switchTab(tab) { activeTab = tab; editingDevice = null; renderPage(); }
+function switchTab(tab) { activeTab = tab; editingDevice = null; settingsView = ''; renderPage(); }
 function renderTabbar() {
   const bar = $('#tabbar'); bar.innerHTML = '';
   const items = [['fiche', 'doc', 'Fiche'], ['fiches', 'list', 'Mes fiches'], ['settings', 'gear', 'Paramètres']];
@@ -1059,24 +1167,46 @@ function renderProfileForm() {
   for (const k of PROFILE_KEYS) { const f = FIELD_META[k]; if (f) box.append(profileField(f)); }
   requestAnimationFrame(() => profileSigSetups.forEach((fn) => fn()));
 }
+/* Paramètres : un sommaire, puis une page par partie (Mes informations / Mes appareils de contrôle) */
+let settingsView = ''; // '' | 'profile' | 'devices'
+function goSettings(view) { settingsView = view; editingDevice = null; renderPage(); }
+const backButton = (label, onclick) => h('button', { type: 'button', class: 'back-link', onclick }, icon('back'), label);
 function saveProfileDraft() {
   const p = {}; PROFILE_KEYS.forEach((k) => { if (profileDraft[k]) p[k] = profileDraft[k]; });
-  store.set('ba.profile', p); toast('Informations enregistrées pour vos prochaines fiches.');
+  store.set('ba.profile', p); goSettings(''); toast('Informations enregistrées pour vos prochaines fiches.');
 }
 function renderSettingsPage() {
   if (editingDevice) { renderDeviceEditPage(); return; }
+  if (settingsView === 'profile') { renderProfilePage(); return; }
+  if (settingsView === 'devices') { renderDevicesPage(); return; }
+  const profile = store.get('ba.profile', {});
+  const who = [profile.verificateur, profile.entreprise].filter(Boolean).join(' · ');
+  const entry = (ic, title, sub, view) => h('button', { type: 'button', class: 'srow', onclick: () => goSettings(view) },
+    h('span', { class: 'srow-ic' }, icon(ic)),
+    h('span', { class: 'srow-txt' }, h('b', {}, title), h('small', {}, sub)),
+    icon('chev'));
+  $('#form').replaceChildren(h('div', { class: 'slist' },
+    entry('user', 'Mes informations', who || 'Vérificateur, entreprise, signature : à compléter', 'profile'),
+    entry('gauge', 'Mes appareils de contrôle', devices.length ? `${devices.length} appareil${devices.length > 1 ? 's' : ''} enregistré${devices.length > 1 ? 's' : ''}` : 'Aucun appareil enregistré', 'devices')));
+}
+function renderProfilePage() {
   profileDraft = { ...store.get('ba.profile', {}) };
-  const main = $('#form'); main.innerHTML = '';
-  main.append(h('section', { class: 'card' },
-    h('div', { class: 'card-head' }, h('h2', {}, 'Mes informations')),
-    h('p', { class: 'card-intro' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, signature).'),
-    h('div', { id: 'profileForm' }),
-    h('div', { class: 'row-actions' }, h('button', { type: 'button', class: 'btn primary', onclick: saveProfileDraft }, 'Enregistrer'))));
+  $('#form').replaceChildren(
+    backButton('Paramètres', () => goSettings('')),
+    h('section', { class: 'card' },
+      h('p', { class: 'card-intro', style: 'margin-top:0' }, 'Préremplies automatiquement sur les prochaines fiches (vérificateur, entreprise, signature).'),
+      h('div', { id: 'profileForm' })));
   renderProfileForm();
-  main.append(h('section', { class: 'card' },
-    h('div', { class: 'card-head' }, h('h2', {}, 'Mes appareils de contrôle')),
-    h('p', { class: 'card-intro' }, 'Proposés dans la liste de l’étape « Appareillage de contrôle ». Le dernier utilisé est prérempli sur les nouvelles fiches.'),
-    h('div', { id: 'deviceList' })));
+  $('#bottomBar').replaceChildren(
+    h('button', { type: 'button', class: 'btn', onclick: () => goSettings('') }, 'Annuler'),
+    h('button', { type: 'button', class: 'btn primary', onclick: saveProfileDraft }, 'Enregistrer'));
+}
+function renderDevicesPage() {
+  $('#form').replaceChildren(
+    backButton('Paramètres', () => goSettings('')),
+    h('section', { class: 'card' },
+      h('p', { class: 'card-intro', style: 'margin-top:0' }, 'Proposés dans la liste de l’étape « Appareillage de contrôle ». Le dernier utilisé est prérempli sur les nouvelles fiches.'),
+      h('div', { id: 'deviceList' })));
   renderDeviceList();
 }
 let editingDevice = null, deviceDraft = {};
@@ -1088,7 +1218,7 @@ function saveDeviceEdit(v) {
   store.set('ba.devices', devices); closeDeviceEdit(); toast('Appareil mis à jour.');
 }
 function openDeviceEdit(v) { editingDevice = v.id; deviceDraft = { ...v }; renderPage(); }
-function closeDeviceEdit() { editingDevice = null; renderPage(); }
+function closeDeviceEdit() { editingDevice = null; settingsView = 'devices'; renderPage(); }
 function renderDeviceEditPage() {
   const v = devices.find((x) => x.id === editingDevice);
   if (!v) { editingDevice = null; renderSettingsPage(); return; }
@@ -1097,8 +1227,8 @@ function renderDeviceEditPage() {
   const renderForm = () => { form.innerHTML = ''; form.append(...DEVICE_KEYS.map((k) => profileField(FIELD_META[k], deviceDraft, renderForm))); };
   renderForm();
   main.append(
-    h('button', { type: 'button', class: 'btn small', onclick: closeDeviceEdit }, '‹ Paramètres'),
-    h('section', { class: 'card', style: 'margin-top:12px' },
+    backButton('Mes appareils', closeDeviceEdit),
+    h('section', { class: 'card' },
       h('div', { class: 'card-head' }, h('h2', {}, deviceName(v))),
       h('p', { class: 'card-intro' }, 'Les fiches déjà remplies ne sont pas modifiées.'),
       form));
@@ -1126,40 +1256,130 @@ function renderDeviceList() {
 
 function openFiche(id) { current = fiches[id]; persist(); enterFiche(); }
 
-function renameFiche(f) {
-  const next = prompt('Renommer la fiche', ficheDisplayName(f));
-  if (next == null) return;
-  const name = next.trim();
-  if (name) f.customName = name; else delete f.customName;
-  persist();
+// Fenêtre de nom, préremplie avec le nom actuel ; résout le nouveau nom, ou null si annulé
+function askFicheName(f, okLabel) {
+  const dlg = $('#dlgName'), input = $('#nameInput');
+  input.value = ficheDisplayName(f); $('#nameOk').textContent = okLabel; dlg.returnValue = '';
+  dlg.showModal(); input.focus(); input.select();
+  return new Promise((resolve) => dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok' ? input.value.trim() : null), { once: true }));
+}
+function applyFicheName(f, name) {
+  // Nom vide ou identique au nom automatique : on revient au nom automatique (qui suit l'adresse)
+  if (name && name !== ficheName(f.data)) f.customName = name; else delete f.customName;
+}
+async function renameFiche(f) {
+  const name = await askFicheName(f, 'Renommer');
+  if (name == null) return;
+  applyFicheName(f, name); persist();
   if (f.id === current.id) updateTitle();
   if (activeTab === 'fiches') renderFichesPage();
 }
+const TYPE_SHORT = { mes: 'Mise en service', maint: 'Maintenance', dep: 'Dépannage' };
+let ficheQuery = '';
+// « il y a 5 min », « hier à 9:12 », « le 03/10/2026 »
+function relTime(t) {
+  const now = new Date(), d = new Date(t), min = Math.round((now - d) / 60000);
+  const hm = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const day0 = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((day0(now) - day0(d)) / 864e5);
+  if (min < 1) return 'à l’instant';
+  if (min < 60) return `il y a ${min} min`;
+  if (days === 0) return `aujourd’hui à ${hm}`;
+  if (days === 1) return `hier à ${hm}`;
+  return 'le ' + d.toLocaleDateString('fr-FR');
+}
+function ficheGroup(t) {
+  const now = new Date(), today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (t >= today0) return 'Aujourd’hui';
+  if (t >= today0 - 864e5) return 'Hier';
+  if (t >= today0 - 6 * 864e5) return 'Cette semaine';
+  return 'Plus anciennes';
+}
+function openFicheSheet(f) {
+  const d = f.data, pr = ficheProgress(d), done = pr.n === pr.total;
+  $('#ficheSheetTitle').textContent = ficheDisplayName(f);
+  $('#ficheSheetSub').textContent = [TYPE_SHORT[d.typeFiche] || 'Type non choisi', d.proprio, `étape ${pr.n}/${pr.total}`].filter(Boolean).join(' · ');
+  const close = () => $('#dlgFiche').close();
+  // Le PDF est préparé dès l'ouverture : le partage doit suivre directement l'appui (exigence des navigateurs)
+  const pdfBox = h('div', { class: 'osec-body' }, h('p', { class: 'pdf-wait' }, 'Préparation du PDF…'));
+  $('#ficheSheetActions').replaceChildren(
+    h('section', { class: 'osec' }, h('h4', {}, 'Document PDF'), pdfBox),
+    h('section', { class: 'osec' }, h('h4', {}, 'Gérer la fiche'),
+      h('button', { type: 'button', class: 'orow', onclick: () => { close(); renameFiche(f); } }, icon('pencil'), h('span', {}, 'Renommer')),
+      h('button', { type: 'button', class: 'orow danger', onclick: () => {
+        if (!confirm('Supprimer définitivement cette fiche ?')) return;
+        close(); delete fiches[f.id];
+        if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); }
+        persist(); renderFichesPage(); toast('Fiche supprimée.');
+      } }, icon('trash'), h('span', {}, 'Supprimer la fiche'))));
+  $('#dlgFiche').dataset.id = f.id; $('#dlgFiche').showModal();
+  buildPdf(d).then(({ name, warn, canShare }) => {
+    if (!$('#dlgFiche').open || $('#dlgFiche').dataset.id !== f.id) return; // menu fermé ou autre fiche entre-temps
+    // Fiche en cours : un simple rappel ; fiche terminée : le détail de ce qui manque
+    const notes = done ? warn.map((w) => h('div', { class: 'warn' }, w))
+      : [h('p', { class: 'onote' }, `Fiche en cours (étape ${pr.n}/${pr.total}) : le PDF sera incomplet.`)];
+    const main = canShare
+      ? h('button', { type: 'button', class: 'btn primary', onclick: share }, icon('share'), ' Partager ou envoyer par mail')
+      : h('button', { type: 'button', class: 'btn primary', onclick: download }, icon('download'), ' Télécharger le PDF');
+    pdfBox.replaceChildren(
+      h('p', { class: 'ofile' }, name),
+      ...notes,
+      main,
+      h('div', { class: 'sheet-row' },
+        canShare ? h('button', { type: 'button', class: 'btn', onclick: download }, icon('download'), ' Télécharger') : null,
+        h('button', { type: 'button', class: 'btn', onclick: () => window.open(pdfUrl, '_blank') }, icon('eye'), ' Aperçu')));
+  }).catch((e) => { console.error(e); pdfBox.replaceChildren(h('div', { class: 'warn' }, 'Échec de la génération du PDF : ' + e.message)); });
+}
+function ficheCard(f) {
+  const d = f.data, pr = ficheProgress(d), isCurrent = f.id === current.id;
+  const pct = Math.round(pr.n / pr.total * 100);
+  return h('article', { class: 'fcard' + (isCurrent ? ' current' : '') },
+    h('button', { type: 'button', class: 'fcard-main', 'aria-label': 'Reprendre la saisie de ' + ficheDisplayName(f), onclick: () => openFiche(f.id) },
+      h('div', { class: 'fcard-top' },
+        h('span', { class: 'ftype ' + (d.typeFiche || 'none') }, TYPE_SHORT[d.typeFiche] || 'Type à choisir'),
+        isCurrent ? h('span', { class: 'fcur' }, 'Dernière ouverte') : null),
+      h('b', { class: 'fcard-title' }, ficheDisplayName(f)),
+      d.proprio ? h('span', { class: 'fcard-sub' }, d.proprio) : null,
+      h('div', { class: 'fprog', role: 'img', 'aria-label': `Étape ${pr.n} sur ${pr.total}` }, h('i', { style: `width:${pct}%` })),
+      h('span', { class: 'fcard-step' }, `Étape ${pr.n}/${pr.total} · ${pr.label}`),
+      h('span', { class: 'fcard-when' }, 'Modifiée ' + relTime(f.updated))),
+    h('div', { class: 'fcard-actions' },
+      h('button', { type: 'button', class: 'btn primary small', onclick: () => openFiche(f.id) }, icon('open'), ' Reprendre la saisie'),
+      h('button', { type: 'button', class: 'btn small', 'aria-haspopup': 'dialog', onclick: () => openFicheSheet(f) }, icon('more'), ' Options')));
+}
 function renderFichesPage() {
   const main = $('#form'); main.innerHTML = '';
-  main.append(h('button', { type: 'button', class: 'btn primary', style: 'width:100%', onclick: () => { const f = newFiche(); openFiche(f.id); } }, icon('plus'), ' Nouvelle fiche'));
-  const list = h('div', { class: 'fiche-list' });
-  main.append(list);
   const arr = Object.values(fiches).sort((a, b) => b.updated - a.updated);
-  if (!arr.length) list.append(h('p', {}, 'Aucune fiche pour l’instant.'));
-  for (const f of arr) {
-    const d = f.data;
-    const when = new Date(f.updated).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    list.append(h('div', { class: 'fiche-item' + (f.id === current.id ? ' current' : '') },
-      h('b', {}, ficheDisplayName(f)),
-      h('small', {}, `${TYPES[d.typeFiche] || 'Type non choisi'}, modifiée le ${when}`),
-      h('small', { class: 'progress' }, ficheProgress(d)),
-      h('div', { class: 'icon-actions' },
-        f.id === current.id ? null : h('button', { type: 'button', class: 'icon-action primary', 'aria-label': 'Ouvrir', title: 'Ouvrir', onclick: () => openFiche(f.id) }, icon('open')),
-        h('button', { type: 'button', class: 'icon-action', 'aria-label': 'Renommer', title: 'Renommer', onclick: () => renameFiche(f) }, icon('pencil')),
-        h('button', { type: 'button', class: 'icon-action', 'aria-label': 'Voir le PDF', title: 'Voir le PDF', onclick: (e) => generate(e.currentTarget, d) }, icon('eye')),
-        h('button', { type: 'button', class: 'icon-action danger', 'aria-label': 'Supprimer', title: 'Supprimer', onclick: () => {
-          if (!confirm('Supprimer définitivement cette fiche ?')) return;
-          delete fiches[f.id];
-          if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); }
-          persist(); renderFichesPage();
-        } }, icon('trash')))));
+  $('#ficheType').textContent = arr.length ? `${arr.length} fiche${arr.length > 1 ? 's' : ''}` : '';
+  // Bouton flottant en bas à droite, à portée de pouce
+  main.append(h('button', { type: 'button', class: 'fab', onclick: () => { const f = newFiche(); openFiche(f.id); } }, icon('plus'), h('span', {}, 'Nouvelle fiche')));
+  if (!arr.length) {
+    main.append(h('div', { class: 'empty' },
+      h('img', { src: 'icons/logo.png', alt: '' }),
+      h('b', {}, 'Aucune fiche pour l’instant'),
+      h('p', {}, 'Touchez « Nouvelle fiche », en bas à droite, pour commencer une saisie. Elle sera enregistrée sur ce téléphone, même hors ligne.')));
+    return;
   }
+  const list = h('div', { class: 'fiche-list' });
+  const draw = () => {
+    const q = ficheQuery.trim().toLowerCase();
+    const shown = q ? arr.filter((f) => [ficheDisplayName(f), f.data.adressePose, f.data.proprio, TYPES[f.data.typeFiche]].filter(Boolean).join(' ').toLowerCase().includes(q)) : arr;
+    list.innerHTML = '';
+    if (!shown.length) { list.append(h('p', { class: 'empty-search' }, 'Aucune fiche ne correspond à « ' + ficheQuery.trim() + ' ».')); return; }
+    let group = null;
+    for (const f of shown) {
+      const g = ficheGroup(f.updated);
+      if (g !== group) { list.append(h('h2', { class: 'fgroup' }, g)); group = g; }
+      list.append(ficheCard(f));
+    }
+  };
+  if (arr.length > 3) {
+    main.append(h('div', { class: 'fsearch' }, icon('search'),
+      h('input', { type: 'search', placeholder: 'Rechercher une adresse, un propriétaire…', 'aria-label': 'Rechercher une fiche', value: ficheQuery, autocomplete: 'off',
+        oninput: (e) => { ficheQuery = e.target.value; draw(); } })));
+  }
+  main.append(list);
+  draw();
 }
 
 /* ---------- Génération et export du PDF ---------- */
@@ -1170,30 +1390,28 @@ async function getTemplate() {
 }
 const slug = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
-async function generate(btn, data) {
+// Génère le PDF d'une fiche et le garde prêt pour Partager / Télécharger / Ouvrir
+async function buildPdf(d) {
+  const bytes = await BAFill.fillBA(PDFLib, await getTemplate(), exportData(d));
+  const typ = { mes: 'MiseEnService', maint: 'Maintenance', dep: 'Depannage' }[d.typeFiche] || 'Fiche';
+  const name = ['BA', typ, slug(d.adressePose), (d.verifDate || today())].filter(Boolean).join('_') + '.pdf';
+  pdfFile = new File([bytes], name, { type: 'application/pdf' });
+  pdfAdresse = d.adressePose || '';
+  if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  pdfUrl = URL.createObjectURL(pdfFile);
+  const warn = [];
+  if (!d.typeFiche) warn.push('Le type de fiche n’est pas coché.');
+  if (!d.sigResp) warn.push('La signature du responsable du réseau intérieur manque : elle est indispensable.');
+  if (!d.sigVerif) warn.push('La signature du vérificateur manque.');
+  return { name, warn, canShare: !!(navigator.canShare && navigator.canShare({ files: [pdfFile] })) };
+}
+async function generate(btn) {
   const label = btn.textContent; btn.disabled = true; btn.textContent = 'Génération…';
   try {
-    const d = data || D();
-    const bytes = await BAFill.fillBA(PDFLib, await getTemplate(), exportData(d));
-    const typ = { mes: 'MiseEnService', maint: 'Maintenance', dep: 'Depannage' }[d.typeFiche] || 'Fiche';
-    const name = ['BA', typ, slug(d.adressePose), (d.verifDate || today())].filter(Boolean).join('_') + '.pdf';
-    pdfFile = new File([bytes], name, { type: 'application/pdf' });
-    pdfAdresse = d.adressePose || '';
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-    pdfUrl = URL.createObjectURL(pdfFile);
+    const { name, warn, canShare } = await buildPdf(D());
     $('#pdfName').textContent = name;
-    const warn = [];
-    if (!d.typeFiche) warn.push('Le type de fiche n’est pas coché.');
-    if (!d.sigResp) warn.push('La signature du responsable du réseau intérieur manque : elle est indispensable.');
-    if (!d.sigVerif) warn.push('La signature du vérificateur manque.');
-    $('#pdfWarn').innerHTML = ''; warn.forEach((w) => $('#pdfWarn').append(h('div', { class: 'warn' }, w)));
-    const canShare = navigator.canShare && navigator.canShare({ files: [pdfFile] });
+    $('#pdfWarn').replaceChildren(...warn.map((w) => h('div', { class: 'warn' }, w)));
     $('#btnShare').hidden = !canShare;
-    // Bouton principal : Enregistrer et quitter ; ouvert depuis Mes fiches (rien à quitter), le partage ou le téléchargement
-    const fromFiche = activeTab === 'fiche';
-    $('#btnSaveQuit').hidden = !fromFiche;
-    $('#btnShare').classList.toggle('primary', !fromFiche && canShare);
-    $('#btnSave').classList.toggle('primary', !fromFiche && !canShare);
     $('#dlgPdf').showModal();
   } catch (e) {
     console.error(e); toast('Échec de la génération : ' + e.message);
@@ -1215,9 +1433,15 @@ $('#btnShare').addEventListener('click', share);
 $('#btnSave').addEventListener('click', download);
 $('#btnOpen').addEventListener('click', () => window.open(pdfUrl, '_blank'));
 $('#btnClosePdf').addEventListener('click', () => $('#dlgPdf').close());
-$('#btnSaveQuit').addEventListener('click', () => {
+$('#btnCloseFiche').append(icon('close'));
+$('#btnCloseFiche').addEventListener('click', () => $('#dlgFiche').close());
+$('#btnSaveQuit').addEventListener('click', async () => {
+  $('#dlgPdf').close();
+  const name = await askFicheName(current, 'Enregistrer et quitter');
+  if (name == null) return; // annulé : on reste sur la saisie
+  applyFicheName(current, name);
   clearTimeout(saveTimer); current.updated = Date.now(); fiches[current.id] = current; persist();
-  $('#dlgPdf').close(); switchTab('fiches'); toast('Fiche enregistrée.');
+  switchTab('fiches'); toast('Fiche enregistrée.');
 });
 document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
 $('#form').addEventListener('input', (e) => e.target.classList.remove('invalid'));
