@@ -1050,7 +1050,7 @@ function renderPage() {
   $('#wizardBar').hidden = activeTab !== 'fiche' && !(activeTab === 'settings' && (editingDevice || settingsView === 'profile'));
   if (activeTab === 'fiche') { updateTitle(); renderStep(); } else {
     $('#chips').innerHTML = '';
-    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : editingDevice ? 'Modifier l’appareil'
+    $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : editingDevice === 'new' ? 'Ajouter un appareil' : editingDevice ? 'Modifier l’appareil'
       : settingsView === 'profile' ? 'Mes informations' : settingsView === 'devices' ? 'Mes appareils de contrôle' : 'Paramètres';
     $('#ficheType').textContent = ''; $('#stepCounter').textContent = ''; $('#saved').style.opacity = 0;
     if (activeTab === 'fiches') renderFichesPage(); else renderSettingsPage();
@@ -1206,22 +1206,24 @@ function renderDevicesPage() {
     backButton('Paramètres', () => goSettings('')),
     h('section', { class: 'card' },
       h('p', { class: 'card-intro', style: 'margin-top:0' }, 'Proposés dans la liste de l’étape « Appareillage de contrôle ». Le dernier utilisé est prérempli sur les nouvelles fiches.'),
-      h('div', { id: 'deviceList' })));
+      h('div', { id: 'deviceList' })),
+    h('button', { type: 'button', class: 'fab', onclick: () => openDeviceEdit(null) }, icon('plus'), h('span', {}, 'Ajouter un appareil')));
   renderDeviceList();
 }
 let editingDevice = null, deviceDraft = {};
 function saveDeviceEdit(v) {
   const d = deviceFields(deviceDraft);
   if (!d.appMarque && !d.appType && !d.appSerie) { toast('Renseignez au moins la marque, le type ou le n° de série.'); return; }
-  if (devices.some((x) => x !== v && sameDevice(x, d))) { toast('Un autre appareil enregistré a déjà ce n° de série.'); return; }
-  DEVICE_KEYS.forEach((k) => delete v[k]); Object.assign(v, d);
-  store.set('ba.devices', devices); closeDeviceEdit(); toast('Appareil mis à jour.');
+  if (devices.some((x) => x !== v && sameDevice(x, d))) { toast(d.appSerie ? 'Un autre appareil enregistré a déjà ce n° de série.' : 'Cet appareil est déjà enregistré.'); return; }
+  if (v) { DEVICE_KEYS.forEach((k) => delete v[k]); Object.assign(v, d); }
+  else devices.push({ id: uid(), used: Date.now(), ...d });
+  store.set('ba.devices', devices); closeDeviceEdit(); toast(v ? 'Appareil mis à jour.' : 'Appareil ajouté.');
 }
-function openDeviceEdit(v) { editingDevice = v.id; deviceDraft = { ...v }; renderPage(); }
+function openDeviceEdit(v) { editingDevice = v ? v.id : 'new'; deviceDraft = v ? { ...v } : {}; renderPage(); }
 function closeDeviceEdit() { editingDevice = null; settingsView = 'devices'; renderPage(); }
 function renderDeviceEditPage() {
-  const v = devices.find((x) => x.id === editingDevice);
-  if (!v) { editingDevice = null; renderSettingsPage(); return; }
+  const v = devices.find((x) => x.id === editingDevice) || null; // null : nouvel appareil
+  if (!v && editingDevice !== 'new') { editingDevice = null; renderSettingsPage(); return; }
   const main = $('#form'); main.innerHTML = '';
   const form = h('div');
   const renderForm = () => { form.innerHTML = ''; form.append(...DEVICE_KEYS.map((k) => profileField(FIELD_META[k], deviceDraft, renderForm))); };
@@ -1229,8 +1231,8 @@ function renderDeviceEditPage() {
   main.append(
     backButton('Mes appareils', closeDeviceEdit),
     h('section', { class: 'card' },
-      h('div', { class: 'card-head' }, h('h2', {}, deviceName(v))),
-      h('p', { class: 'card-intro' }, 'Les fiches déjà remplies ne sont pas modifiées.'),
+      h('div', { class: 'card-head' }, h('h2', {}, v ? deviceName(v) : 'Nouvel appareil')),
+      h('p', { class: 'card-intro' }, v ? 'Les fiches déjà remplies ne sont pas modifiées.' : 'Il sera proposé dans la liste de l’étape « Appareillage de contrôle ».'),
       form));
   // Même barre fixe en bas d'écran que Précédent / Suivant dans la fiche
   $('#bottomBar').replaceChildren(
@@ -1239,7 +1241,7 @@ function renderDeviceEditPage() {
 }
 function renderDeviceList() {
   const box = $('#deviceList'); box.innerHTML = '';
-  if (!devices.length) box.append(h('p', {}, 'Aucun appareil enregistré. Ajoutez-en un depuis une fiche, à l’étape « Appareillage de contrôle ».'));
+  if (!devices.length) box.append(h('p', {}, 'Aucun appareil enregistré. Touchez « Ajouter un appareil », en bas à droite, ou enregistrez-en un depuis une fiche.'));
   for (const v of devices.slice().sort((a, b) => b.used - a.used)) {
     const date = v.appDate ? new Date(v.appDate + 'T00:00').toLocaleDateString('fr-FR') : null;
     box.append(h('div', { class: 'fiche-item device-item' },
