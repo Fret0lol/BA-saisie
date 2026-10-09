@@ -288,6 +288,53 @@ dialog::backdrop { background: rgba(6, 22, 38, .6); }
 .srow-txt b { font-size: 16px; }
 .srow-txt small { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .srow > svg:last-child { color: var(--muted); flex: none; }
+/* Conseil d'installation (écran d'accueil) */
+.ihint { display: flex; gap: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: inset 4px 0 0 var(--lagon); padding: 14px 14px 14px 16px; margin-bottom: 14px; }
+.ihint-ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--t-mes-bg); color: var(--t-mes); flex: none; }
+.ihint-body { flex: 1; min-width: 0; }
+.ihint-body b { display: block; font-size: 16px; line-height: 1.3; }
+.ihint-body p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.ihint-body p.ihint-step { color: var(--ink); font-size: 15px; }
+.ihint-step svg { width: 18px; height: 18px; vertical-align: -3px; color: var(--primary); }
+.ihint-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.ihint-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+/* Sauvegarde : rappel dans « Mes fiches » et page Paramètres › Sauvegarde */
+.bhint { box-shadow: inset 4px 0 0 var(--primary); }
+.bhint .ihint-ic { background: var(--t-maint-bg); color: var(--t-maint); }
+.bk-status { margin: 10px 0 0; font-size: 15px; font-weight: 700; }
+.bk-actions { display: grid; gap: 10px; margin-top: 14px; }
+.bk-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.bk-actions .ofile, .bk-actions .pdf-wait { margin: 0; }
+.bk-actions .warn { margin-top: 0; }
+.bk-actions [hidden] { display: none; }
+.sheet .bk-help { margin: -2px 0 6px; font-size: 14px; }
+.slist.inote { margin-top: 14px; }
+.inote .srow { min-height: 64px; }
+.inote .srow-ic { background: var(--t-mes-bg); color: var(--t-mes); }
+.inote div.srow small { white-space: normal; }
+/* Stockage : place occupée, alerte « mémoire presque pleine » */
+.ihint.salert { box-shadow: inset 4px 0 0 var(--ko); }
+.salert .ihint-ic, .srow-ic.ko { background: var(--ko-bg); color: var(--ko); }
+.slist.salert-row { margin-bottom: 14px; box-shadow: inset 4px 0 0 var(--ko); }
+.salert-row .srow { min-height: 64px; }
+.salert-row .srow-txt small { white-space: normal; }
+.sbig { font-size: 28px; font-weight: 700; line-height: 1.2; margin: 6px 0 0; }
+.sbar { height: 10px; border-radius: 5px; background: var(--line); margin: 14px 0 6px; overflow: hidden; }
+.sbar i { display: block; height: 100%; min-width: 3px; border-radius: 5px; background: var(--primary); }
+.sbar.ko i { background: var(--ko); }
+.scap { margin: 0; font-size: 15px; }
+.scap + .scap { margin-top: 4px; }
+.skv { margin: 0; }
+.skv > div { padding: 10px 0; }
+.skv > div + div { border-top: 1px solid var(--line); }
+.skv > div:first-child { padding-top: 0; }
+.skv > div:last-child { padding-bottom: 0; }
+.skv dt { font-size: 13px; color: var(--muted); }
+.skv dd { margin: 2px 0 0; font-size: 16px; }
+.skv dd.ok { color: var(--ok); font-weight: 700; }
+.skv dd small { display: block; font-size: 14px; color: var(--muted); font-weight: 400; }
+.shead { margin: 20px 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .orow { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0 4px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); font-size: 16px; font-weight: 700; text-align: left; }
 .orow:last-child { border-bottom: 1px solid var(--line); }
 .orow svg { color: var(--muted); }
@@ -544,7 +591,7 @@ const store = {
 const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-let fiches = store.get('ba.fiches', {});
+let fiches = {}; // { [id]: fiche } en mémoire, chargées au démarrage par initFiches()
 let current = null; // { id, created, updated, data }
 
 /* Appareils de contrôle enregistrés : [{ id, used, appMarque, appType, appSerie, appDate, appLogoNF }] */
@@ -564,19 +611,142 @@ function deviceFields(v = {}) { const o = {}; DEVICE_KEYS.forEach((k) => { if (v
 function newFiche(base = {}) {
   const profile = store.get('ba.profile', {});
   const f = { id: uid(), created: Date.now(), updated: Date.now(), data: { ...profile, ...deviceFields(lastDevice()), verifDate: today(), respDate: today(), ...base } };
-  fiches[f.id] = f; persist(); return f;
+  saveFiche(f); return f;
 }
-function persist() { store.set('ba.fiches', fiches); if (current) store.set('ba.current', current.id); }
-let saveTimer;
+const rememberCurrent = () => { if (current) store.set('ba.current', current.id); };
+
+/* ---------- Fiches : IndexedDB, une fiche par enregistrement ----------
+   API (utilisée aussi par la sauvegarde / restauration) :
+     ficheBackend()        → 'indexeddb' | 'localStorage' (repli si IndexedDB indisponible)
+     loadAllFiches()       → Promise<fiche[]> lues sur le stockage (ne touche pas à `fiches`)
+     saveFiche(f)          → met f dans `fiches` et l'écrit seule ; Promise<bool>
+     deleteFiche(id)       → retire la fiche de `fiches` et du stockage ; Promise<bool>
+     replaceAllFiches(arr) → remplace TOUTES les fiches (import) ; Promise<bool>.
+                             L'appelant choisit ensuite `current` puis appelle enterFiche().
+     flushSave()           → écrit tout de suite la saisie en attente (anti-rebond 350 ms)
+   Les écritures échouées affichent un message ; la fiche reste en mémoire et sera réécrite
+   à la prochaine sauvegarde. ba.current / ba.profile / ba.devices restent dans localStorage. */
+const IDB_NAME = 'ba-saisie', IDB_STORE = 'fiches';
+let idb = null; // connexion ouverte, ou null = repli localStorage
+const ficheBackend = () => (idb ? 'indexeddb' : 'localStorage');
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('IndexedDB indisponible'));
+    const t = setTimeout(() => reject(new Error('IndexedDB ne répond pas')), 4000);
+    let rq;
+    try { rq = indexedDB.open(IDB_NAME, 1); } catch (e) { clearTimeout(t); return reject(e); }
+    rq.onupgradeneeded = () => rq.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
+    rq.onsuccess = () => {
+      clearTimeout(t);
+      const db = rq.result;
+      db.onversionchange = () => { db.close(); if (idb === db) idb = 'closed'; };
+      db.onclose = () => { if (idb === db) idb = 'closed'; }; // Safari ferme parfois la connexion en arrière-plan
+      resolve(db);
+    };
+    rq.onerror = () => { clearTimeout(t); reject(rq.error); };
+  });
+}
+// Une transaction ; fn(objectStore) peut renvoyer une requête dont le résultat est rendu
+async function idbTx(mode, fn) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      if (idb === 'closed') idb = await idbOpen();
+      return await new Promise((resolve, reject) => {
+        const tx = idb.transaction(IDB_STORE, mode), rq = fn(tx.objectStore(IDB_STORE));
+        tx.oncomplete = () => resolve(rq ? rq.result : undefined);
+        tx.onerror = tx.onabort = () => reject(tx.error || new Error('Transaction annulée'));
+      });
+    } catch (e) {
+      // Connexion perdue (InvalidStateError) : on rouvre une fois
+      if (attempt || e.name !== 'InvalidStateError') throw e;
+      idb = 'closed';
+    }
+  }
+}
+function storageError(e) {
+  console.error('Enregistrement', e);
+  toast(e && e.name === 'QuotaExceededError'
+    ? 'Mémoire du téléphone pleine : fiche NON enregistrée. Supprimez d’anciennes fiches.'
+    : 'Erreur : fiche NON enregistrée sur le téléphone. Gardez l’app ouverte et réessayez.');
+  return false;
+}
+async function loadAllFiches() {
+  if (!idb) return Object.values(store.get('ba.fiches', {}));
+  return idbTx('readonly', (os) => os.getAll());
+}
+async function saveFiche(f) {
+  fiches[f.id] = f;
+  if (!idb) return store.set('ba.fiches', fiches);
+  try { await idbTx('readwrite', (os) => { os.put(f); }); return true; } catch (e) { return storageError(e); }
+}
+async function deleteFiche(id) {
+  if (savePending && savePending.id === id) { clearTimeout(saveTimer); savePending = null; } // ne pas la recréer
+  delete fiches[id];
+  if (!idb) return store.set('ba.fiches', fiches);
+  try { await idbTx('readwrite', (os) => { os.delete(id); }); return true; } catch (e) { return storageError(e); }
+}
+async function replaceAllFiches(arr) {
+  clearTimeout(saveTimer); savePending = null; // la saisie en attente est remplacée par l'import
+  const map = {}; arr.forEach((f) => { map[f.id] = f; });
+  if (!idb) { if (!store.set('ba.fiches', map)) return false; }
+  else {
+    try { await idbTx('readwrite', (os) => { os.clear(); arr.forEach((f) => os.put(f)); }); } // tout ou rien
+    catch (e) { return storageError(e); }
+  }
+  fiches = map; return true;
+}
+
+// Migration unique localStorage « ba.fiches » → IndexedDB. Rejouable : put() écrase par id,
+// la version la plus récente gagne, et ba.fiches n'est supprimé qu'après relecture complète.
+async function migrateFiches() {
+  const old = store.get('ba.fiches', null);
+  if (!old || typeof old !== 'object') return;
+  const list = Object.values(old).filter((f) => f && f.id);
+  const have = {}; (await idbTx('readonly', (os) => os.getAll())).forEach((f) => { have[f.id] = f; });
+  const todo = list.filter((f) => !have[f.id] || (f.updated || 0) >= (have[f.id].updated || 0));
+  if (todo.length) await idbTx('readwrite', (os) => { todo.forEach((f) => os.put(f)); });
+  const keys = new Set(await idbTx('readonly', (os) => os.getAllKeys()));
+  if (list.some((f) => !keys.has(f.id))) throw new Error(`Migration incomplète (${keys.size} / ${list.length})`);
+  localStorage.removeItem('ba.fiches');
+}
+const dropIdb = () => { if (idb && idb !== 'closed') idb.close(); idb = null; }; // passe en repli localStorage
+// Démarrage : ouvre IndexedDB, migre, charge les fiches en mémoire. Repli localStorage si échec.
+async function initFiches() {
+  try {
+    idb = await idbOpen();
+    try { await migrateFiches(); }
+    catch (e) { // ex. mémoire pleine : on garde localStorage intact et on continue dessus
+      console.error('Migration IndexedDB', e); dropIdb();
+      toast('Stockage avancé indisponible : les fiches restent dans l’ancien stockage (limité).');
+    }
+  } catch (e) { console.warn('IndexedDB indisponible, repli localStorage', e); idb = null; }
+  let list;
+  try { list = await loadAllFiches(); }
+  catch (e) { console.error('Lecture IndexedDB', e); dropIdb(); list = await loadAllFiches(); }
+  fiches = {}; list.forEach((f) => { fiches[f.id] = f; });
+}
+
+let saveTimer, savePending = null; // fiche modifiée en attente d'écriture
+function flushSave() {
+  clearTimeout(saveTimer);
+  const f = savePending; savePending = null;
+  if (!f) return Promise.resolve(true);
+  f.updated = Date.now(); return saveFiche(f).then((ok) => { if (ok) storageWatch(); return ok; });
+}
 function scheduleSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    current.updated = Date.now(); fiches[current.id] = current; persist();
-    if (activeTab !== 'fiche') return;
+  if (savePending && savePending !== current) flushSave(); // autre fiche encore en attente
+  savePending = current;
+  saveTimer = setTimeout(async () => {
+    if (!(await flushSave()) || activeTab !== 'fiche') return;
     const el = document.getElementById('saved'); el.textContent = 'Enregistré'; el.style.opacity = 1;
     setTimeout(() => (el.style.opacity = 0), 1500);
   }, 350);
 }
+// Écrit la saisie en attente quand l'app passe en arrière-plan ou se ferme
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+addEventListener('pagehide', () => flushSave());
 
 /* =====================================================================
    Rendu du formulaire
@@ -620,6 +790,10 @@ const ICONS = {
   gauge: () => svg('g', {}, svg('path', { d: 'M4 17a8 8 0 1116 0' }), svg('path', { d: 'M12 17l4-5' }), svg('circle', { cx: 12, cy: 17, r: 1.2, fill: 'currentColor' })),
   search: () => svg('g', {}, svg('circle', { cx: 11, cy: 11, r: 7 }), svg('path', { d: 'M20 20l-4-4' })),
   pencil: () => svg('path', { d: 'M12 20h9 M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z' }),
+  archive: () => svg('path', { d: 'M3 4h18v4H3z M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8 M10 12h4' }),
+  upload: () => svg('path', { d: 'M12 21V9 M7 14l5-5 5 5 M5 3h14' }),
+  disk: () => svg('g', {}, svg('ellipse', { cx: 12, cy: 6, rx: 8, ry: 3 }), svg('path', { d: 'M4 6v12c0 1.66 3.58 3 8 3s8-1.34 8-3V6 M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3' })),
+  alert: () => svg('path', { d: 'M12 3.5L2.5 20h19L12 3.5z M12 10v4.5 M12 17.2v.3' }),
 };
 function icon(name) {
   return svg('svg', { viewBox: '0 0 24 24', width: 20, height: 20, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' },
@@ -1051,7 +1225,7 @@ function renderPage() {
   if (activeTab === 'fiche') { updateTitle(); renderStep(); } else {
     $('#chips').innerHTML = '';
     $('#ficheTitle').textContent = activeTab === 'fiches' ? 'Mes fiches' : editingDevice === 'new' ? 'Ajouter un appareil' : editingDevice ? 'Modifier l’appareil'
-      : settingsView === 'profile' ? 'Mes informations' : settingsView === 'devices' ? 'Mes appareils de contrôle' : 'Paramètres';
+      : settingsView === 'profile' ? 'Mes informations' : settingsView === 'devices' ? 'Mes appareils de contrôle' : settingsView === 'storage' ? 'Stockage' : settingsView === 'backup' ? 'Sauvegarde' : 'Paramètres';
     $('#ficheType').textContent = ''; $('#stepCounter').textContent = ''; $('#saved').style.opacity = 0;
     if (activeTab === 'fiches') renderFichesPage(); else renderSettingsPage();
   }
@@ -1179,6 +1353,8 @@ function renderSettingsPage() {
   if (editingDevice) { renderDeviceEditPage(); return; }
   if (settingsView === 'profile') { renderProfilePage(); return; }
   if (settingsView === 'devices') { renderDevicesPage(); return; }
+  if (settingsView === 'backup') { renderBackupPage(); return; }
+  if (settingsView === 'storage') { renderStoragePage(); return; }
   const profile = store.get('ba.profile', {});
   const who = [profile.verificateur, profile.entreprise].filter(Boolean).join(' · ');
   const entry = (ic, title, sub, view) => h('button', { type: 'button', class: 'srow', onclick: () => goSettings(view) },
@@ -1187,7 +1363,10 @@ function renderSettingsPage() {
     icon('chev'));
   $('#form').replaceChildren(h('div', { class: 'slist' },
     entry('user', 'Mes informations', who || 'Vérificateur, entreprise, signature : à compléter', 'profile'),
-    entry('gauge', 'Mes appareils de contrôle', devices.length ? `${devices.length} appareil${devices.length > 1 ? 's' : ''} enregistré${devices.length > 1 ? 's' : ''}` : 'Aucun appareil enregistré', 'devices')));
+    entry('gauge', 'Mes appareils de contrôle', devices.length ? `${devices.length} appareil${devices.length > 1 ? 's' : ''} enregistré${devices.length > 1 ? 's' : ''}` : 'Aucun appareil enregistré', 'devices'),
+    entry('archive', 'Sauvegarde', backupStatus(), 'backup'),
+    entry('disk', 'Stockage', storageSummary(), 'storage')));
+  const inote = renderInstallNote(); if (inote) $('#form').append(inote);
 }
 function renderProfilePage() {
   profileDraft = { ...store.get('ba.profile', {}) };
@@ -1256,7 +1435,7 @@ function renderDeviceList() {
   }
 }
 
-function openFiche(id) { current = fiches[id]; persist(); enterFiche(); }
+function openFiche(id) { flushSave(); current = fiches[id]; rememberCurrent(); enterFiche(); }
 
 // Fenêtre de nom, préremplie avec le nom actuel ; résout le nouveau nom, ou null si annulé
 function askFicheName(f, okLabel) {
@@ -1272,7 +1451,7 @@ function applyFicheName(f, name) {
 async function renameFiche(f) {
   const name = await askFicheName(f, 'Renommer');
   if (name == null) return;
-  applyFicheName(f, name); persist();
+  applyFicheName(f, name); saveFiche(f);
   if (f.id === current.id) updateTitle();
   if (activeTab === 'fiches') renderFichesPage();
 }
@@ -1310,9 +1489,9 @@ function openFicheSheet(f) {
       h('button', { type: 'button', class: 'orow', onclick: () => { close(); renameFiche(f); } }, icon('pencil'), h('span', {}, 'Renommer')),
       h('button', { type: 'button', class: 'orow danger', onclick: () => {
         if (!confirm('Supprimer définitivement cette fiche ?')) return;
-        close(); delete fiches[f.id];
-        if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); }
-        persist(); renderFichesPage(); toast('Fiche supprimée.');
+        close(); deleteFiche(f.id);
+        if (f.id === current.id) { const rest = Object.values(fiches).sort((a, b) => b.updated - a.updated); current = rest[0] || newFiche(); rememberCurrent(); }
+        renderFichesPage(); toast('Fiche supprimée.');
       } }, icon('trash'), h('span', {}, 'Supprimer la fiche'))));
   $('#dlgFiche').dataset.id = f.id; $('#dlgFiche').showModal();
   buildPdf(d).then(({ name, warn, canShare }) => {
@@ -1349,12 +1528,237 @@ function ficheCard(f) {
       h('button', { type: 'button', class: 'btn primary small', onclick: () => openFiche(f.id) }, icon('open'), ' Reprendre la saisie'),
       h('button', { type: 'button', class: 'btn small', 'aria-haspopup': 'dialog', onclick: () => openFicheSheet(f) }, icon('more'), ' Options')));
 }
+
+/* Installation sur l'écran d'accueil : dans un onglet Safari, iOS peut effacer les données du site
+   après 7 jours sans visite ; l'application installée garde les fiches (stockage séparé de Safari). */
+const INSTALL_HINT_KEY = 'ba.installHint'; // date du dernier « Plus tard »
+const INSTALL_SNOOZE_MS = 14 * 24 * 3600 * 1000;
+let installPrompt = null, installDone = false;
+const isStandalone = () => navigator.standalone === true || !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function installMode() { // '' | 'prompt' (Android/Chrome) | 'ios'
+  if (installDone || isStandalone()) return '';
+  if (installPrompt) return 'prompt';
+  return isIOS() ? 'ios' : '';
+}
+function installSnoozed() {
+  try { const t = Number(localStorage.getItem(INSTALL_HINT_KEY)); return t > 0 && Date.now() - t < INSTALL_SNOOZE_MS; } catch (e) { return false; }
+}
+function snoozeInstallHint() {
+  try { localStorage.setItem(INSTALL_HINT_KEY, String(Date.now())); } catch (e) {}
+  refreshInstallUI();
+}
+async function runInstallPrompt() {
+  const p = installPrompt; if (!p) return;
+  installPrompt = null;
+  try { p.prompt(); const r = await p.userChoice; if (r && r.outcome === 'accepted') installDone = true; else snoozeInstallHint(); } catch (e) {}
+  refreshInstallUI();
+}
+const installStep = () => h('p', { class: 'ihint-step' }, 'Touchez Partager ', icon('share'), ' puis « Sur l’écran d’accueil ».');
+function renderInstallHint() { // carte en tête de « Mes fiches »
+  const mode = installMode();
+  if (!mode || installSnoozed()) return null;
+  const later = h('button', { type: 'button', class: 'btn', onclick: snoozeInstallHint }, 'Plus tard');
+  const body = mode === 'ios'
+    ? h('div', { class: 'ihint-body' },
+      h('b', {}, 'Installez l’application sur l’écran d’accueil'),
+      h('p', {}, 'Vos fiches y restent enregistrées. Dans Safari, elles peuvent être effacées après 7 jours sans utilisation.'),
+      installStep(),
+      h('p', {}, 'Les fiches déjà saisies dans Safari n’apparaîtront pas dans l’application.'),
+      h('div', { class: 'ihint-actions' }, later))
+    : h('div', { class: 'ihint-body' },
+      h('b', {}, 'Installez l’application sur ce téléphone'),
+      h('p', {}, 'Elle s’ouvre comme une appli, même hors ligne, et vos fiches restent mieux conservées.'),
+      h('div', { class: 'ihint-actions' },
+        h('button', { type: 'button', class: 'btn primary', onclick: runInstallPrompt }, icon('download'), 'Installer l’application'), later));
+  return h('aside', { class: 'ihint', id: 'installHint', 'aria-label': 'Installer l’application' },
+    h('span', { class: 'ihint-ic' }, icon('download')), body);
+}
+function renderInstallNote() { // ligne discrète dans Paramètres (toujours visible tant que non installée)
+  const mode = installMode();
+  if (!mode) return null;
+  const ic = h('span', { class: 'srow-ic' }, icon('download'));
+  const row = mode === 'prompt'
+    ? h('button', { type: 'button', class: 'srow', onclick: runInstallPrompt }, ic,
+      h('span', { class: 'srow-txt' }, h('b', {}, 'Installer l’application'), h('small', {}, 'Accès hors ligne, fiches mieux conservées')), icon('chev'))
+    : h('div', { class: 'srow' }, ic,
+      h('span', { class: 'srow-txt' }, h('b', {}, 'Installer sur l’écran d’accueil'), h('small', {}, 'Partager, puis « Sur l’écran d’accueil » : vos fiches restent enregistrées.')));
+  return h('div', { class: 'slist inote', id: 'installNote' }, row);
+}
+function refreshInstallUI() { // met à jour la carte / la ligne sans re-rendre la page
+  const card = $('#installHint'), note = $('#installNote');
+  if (activeTab === 'fiches') {
+    const n = renderInstallHint();
+    if (card) { if (n) card.replaceWith(n); else card.remove(); } else if (n) $('#form').prepend(n);
+  } else if (card) card.remove();
+  if (activeTab === 'settings' && !settingsView && !editingDevice) {
+    const n = renderInstallNote();
+    if (note) { if (n) note.replaceWith(n); else note.remove(); } else if (n) $('#form').append(n);
+  } else if (note) note.remove();
+}
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; refreshInstallUI(); });
+addEventListener('appinstalled', () => { installPrompt = null; installDone = true; refreshInstallUI(); });
+
+/* ---------- Stockage : place occupée par les fiches, alerte avant saturation ----------
+   Taille des données = JSON des fiches en mémoire (+ infos + appareils) : rapide, identique pour les deux
+   moteurs. Limite : 5 Mo en repli localStorage (on y mesure tout localStorage, c'est lui qui sature) ;
+   en IndexedDB, navigator.storage.estimate() (usage/quota, cache du service worker compris).
+   Tout est calculé à la demande, jamais avant la fin de initFiches(). */
+const STORAGE_LS_LIMIT = 5 * 1024 * 1024, STORAGE_WARN = 0.8;
+const ficheSizeCache = new Map(); // id → [updated, taille] : évite de resérialiser les signatures
+let lastStorage = null, storageWarned = false, storageWatchAt = 0;
+function ficheBytes(f) {
+  const c = ficheSizeCache.get(f.id);
+  if (c && c[0] === f.updated) return c[1];
+  const n = JSON.stringify(f).length; ficheSizeCache.set(f.id, [f.updated, n]); return n;
+}
+const rawLen = (k) => { try { return (localStorage.getItem(k) || '').length; } catch (e) { return 0; } };
+function appDataBytes() { // fiches + mes informations + appareils
+  let n = 0; for (const f of Object.values(fiches)) n += ficheBytes(f);
+  return n + rawLen('ba.profile') + rawLen('ba.devices');
+}
+function localStorageBytes() {
+  let n = 0;
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += k.length + rawLen(k); } } catch (e) {}
+  return n;
+}
+const fmtNum = (x) => x.toLocaleString('fr-FR', { maximumFractionDigits: x < 10 ? 1 : 0 });
+function fmtBytes(n) { // « 38 Ko », « 1,4 Mo », « 2,1 Go »
+  if (n >= 1000 * 1024 ** 2) return fmtNum(n / 1024 ** 3) + ' Go';
+  if (n >= 1000 * 1024) return fmtNum(n / 1024 ** 2) + ' Mo';
+  return Math.max(1, Math.round(n / 1024)).toLocaleString('fr-FR') + ' Ko';
+}
+const fmtPct = (r) => (r < 0.01 ? 'moins de 1' : Math.min(100, Math.round(r * 100))) + ' %';
+const plural = (n, w) => `${n.toLocaleString('fr-FR')} ${w}${n > 1 ? 's' : ''}`;
+async function storageInfo() {
+  const list = Object.values(fiches);
+  const info = { count: list.length, data: appDataBytes(), backend: ficheBackend(), used: null, limit: null, ratio: null, persisted: null };
+  info.avg = list.length ? list.reduce((s, f) => s + ficheBytes(f), 0) / list.length : 60 * 1024;
+  if (info.backend === 'localStorage') { info.used = localStorageBytes(); info.limit = STORAGE_LS_LIMIT; }
+  else {
+    try { const e = await navigator.storage.estimate(); if (e && e.quota) { info.used = e.usage || 0; info.limit = e.quota; } } catch (e) {}
+  }
+  if (info.limit) info.ratio = info.used / info.limit;
+  try { if (navigator.storage && navigator.storage.persisted) info.persisted = await navigator.storage.persisted(); } catch (e) {}
+  info.warn = info.ratio != null && info.ratio >= STORAGE_WARN;
+  return info;
+}
+// Au démarrage et après un enregistrement : un seul message par session si la mémoire dépasse 80 %
+async function storageWatch(force) {
+  if (!force && Date.now() - storageWatchAt < 10000) return;
+  storageWatchAt = Date.now();
+  const info = await storageInfo(); lastStorage = info;
+  if (info.warn && !storageWarned) {
+    storageWarned = true;
+    toast(`Mémoire presque pleine (${fmtPct(info.ratio)}) : faites une sauvegarde et supprimez d’anciennes fiches.`);
+  }
+  refreshStorageAlert();
+}
+function storageSummary() { // sous-titre de la ligne « Stockage » dans Paramètres
+  const n = Object.keys(fiches).length;
+  return `${n ? plural(n, 'fiche') : 'Aucune fiche'} · ${fmtBytes(appDataBytes())} utilisés` + (lastStorage && lastStorage.warn ? ' · presque plein' : '');
+}
+function renderStorageAlert() { // ligne compacte en tête de « Mes fiches » au-delà de 80 %
+  storageWatch(true); // recalcule (suppression, import…) puis met la ligne à jour
+  return storageAlertRow();
+}
+function storageAlertRow() {
+  if (!lastStorage || !lastStorage.warn) return null;
+  return h('div', { class: 'slist salert-row', id: 'storageAlert' },
+    h('button', { type: 'button', class: 'srow', onclick: () => { activeTab = 'settings'; goSettings('storage'); } },
+      h('span', { class: 'srow-ic ko' }, icon('alert')),
+      h('span', { class: 'srow-txt' }, h('b', {}, `Mémoire presque pleine (${fmtPct(lastStorage.ratio)})`),
+        h('small', {}, 'Faites une sauvegarde puis supprimez d’anciennes fiches.')),
+      icon('chev')));
+}
+function refreshStorageAlert() {
+  if (activeTab !== 'fiches') return;
+  const old = $('#storageAlert'), n = storageAlertRow();
+  if (old) { if (n) old.replaceWith(n); else old.remove(); }
+  else if (n) { const before = $('#form').querySelector(':scope > .fsearch, :scope > .fiche-list, :scope > .empty'); $('#form').insertBefore(n, before); }
+}
+function renderStoragePage() {
+  const body = h('div', {}, h('p', { class: 'pdf-wait' }, 'Calcul de la place occupée…'));
+  $('#form').replaceChildren(backButton('Paramètres', () => goSettings('')), body);
+  storageInfo().then((info) => {
+    lastStorage = info; storageWatchAt = Date.now();
+    if (activeTab !== 'settings' || settingsView !== 'storage' || !body.isConnected) return;
+    body.replaceChildren(...storageView(info));
+  });
+}
+function storageView(info) {
+  const out = [];
+  const isLS = info.backend === 'localStorage';
+  if (info.warn) {
+    out.push(h('aside', { class: 'ihint salert', 'aria-label': 'Mémoire presque pleine' },
+      h('span', { class: 'ihint-ic' }, icon('alert')),
+      h('div', { class: 'ihint-body' },
+        h('b', {}, `Mémoire presque pleine : ${fmtPct(info.ratio)} utilisés`),
+        h('p', {}, 'Bientôt, les nouvelles fiches ne pourront plus être enregistrées. Faites une sauvegarde de vos fiches, puis supprimez les plus anciennes déjà envoyées.'),
+        h('div', { class: 'ihint-actions' },
+          h('button', { type: 'button', class: 'btn primary', onclick: () => goSettings('backup') }, icon('download'), 'Faire une sauvegarde'),
+          h('button', { type: 'button', class: 'btn', onclick: () => switchTab('fiches') }, 'Voir mes fiches')))));
+  }
+  // Place occupée
+  const space = h('section', { class: 'card' },
+    h('p', { class: 'card-intro', style: 'margin:0' }, 'Place occupée par vos fiches'),
+    h('p', { class: 'sbig' }, fmtBytes(info.data)),
+    h('p', { class: 'card-intro' }, `${info.count ? plural(info.count, 'fiche') : 'Aucune fiche'}, avec vos informations et vos appareils`));
+  if (info.limit) {
+    const free = Math.max(0, info.limit - info.used), more = Math.floor(free / Math.max(info.avg, 60 * 1024)); // 60 Ko : fiche signée typique
+    const roomy = !isLS && info.ratio < 0.05; // quota du navigateur immense : un pourcentage ne dirait rien
+    if (!roomy) {
+      space.append(h('div', { class: 'sbar' + (info.warn ? ' ko' : ''), role: 'img', 'aria-label': `${fmtPct(info.ratio)} de la place utilisée` },
+        h('i', { style: `width:${Math.min(100, info.ratio * 100).toFixed(1)}%` })),
+      h('p', { class: 'scap' }, h('b', {}, `${fmtBytes(info.used)} sur ${fmtBytes(info.limit)}`), ` (${fmtPct(info.ratio)})`));
+    } else {
+      space.append(h('p', { class: 'scap', style: 'margin-top:14px' }, h('b', {}, `${fmtBytes(free)} encore disponibles`), ' : largement suffisant.'));
+    }
+    space.append(h('p', { class: 'scap' }, more > 10000 ? 'Place pour plus de 10\u00a0000 fiches supplémentaires.' : more > 0 ? `Place pour environ ${plural(more, 'fiche')} de plus.` : 'Plus de place pour de nouvelles fiches.'));
+    if (!isLS) space.append(h('p', { class: 'card-intro' }, 'L’espace utilisé comprend aussi l’application elle-même, gardée sur le téléphone pour marcher hors ligne.'));
+  }
+  out.push(space);
+  // Détails
+  const protect = info.persisted === true
+    ? h('dd', { class: 'ok' }, 'Oui, protégé contre l’effacement automatique')
+    : info.persisted === false
+      ? h('dd', {}, 'Non', h('small', {}, 'Le téléphone peut effacer les données s’il manque de place. Installez l’application et faites des sauvegardes régulières.'))
+      : h('dd', {}, 'Information non disponible sur ce navigateur');
+  out.push(h('section', { class: 'card' }, h('dl', { class: 'skv' },
+    h('div', {}, h('dt', {}, 'Fiches enregistrées'), h('dd', {}, String(info.count))),
+    h('div', {}, h('dt', {}, 'Type de stockage'), h('dd', {}, isLS ? 'Stockage limité (localStorage, environ 5 Mo)' : 'Stockage du navigateur (IndexedDB)')),
+    h('div', {}, h('dt', {}, 'Protection des données'), protect))));
+  // Fiches les plus lourdes
+  const heavy = Object.values(fiches).map((f) => [f, ficheBytes(f)]).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (heavy.length) {
+    out.push(h('h2', { class: 'shead' }, heavy.length > 1 ? `Les ${heavy.length} fiches les plus lourdes` : 'Fiche enregistrée'),
+      h('p', { class: 'card-intro', style: 'margin:0 0 8px' }, 'Les signatures prennent l’essentiel de la place. Touchez une fiche pour l’envoyer ou la supprimer.'),
+      h('div', { class: 'slist' }, ...heavy.map(([f, n]) => h('button', { type: 'button', class: 'srow', onclick: () => openStorageFiche(f) },
+        h('span', { class: 'srow-ic' }, icon('doc')),
+        h('span', { class: 'srow-txt' }, h('b', {}, ficheDisplayName(f)), h('small', {}, `${fmtBytes(n)} · modifiée ${relTime(f.updated)}`)),
+        icon('chev')))));
+  }
+  return out;
+}
+// Menu d'options d'une fiche depuis Stockage : à la fermeture (suppression, renommage), on revient sur Stockage
+function openStorageFiche(f) {
+  openFicheSheet(f);
+  $('#dlgFiche').addEventListener('close', () => setTimeout(() => {
+    const back = () => { if (activeTab === 'settings' && settingsView === 'storage') renderPage(); };
+    if ($('#dlgName').open) $('#dlgName').addEventListener('close', () => setTimeout(back), { once: true }); else back();
+  }), { once: true });
+}
+
 function renderFichesPage() {
   const main = $('#form'); main.innerHTML = '';
   const arr = Object.values(fiches).sort((a, b) => b.updated - a.updated);
   $('#ficheType').textContent = arr.length ? `${arr.length} fiche${arr.length > 1 ? 's' : ''}` : '';
   // Bouton flottant en bas à droite, à portée de pouce
   main.append(h('button', { type: 'button', class: 'fab', onclick: () => { const f = newFiche(); openFiche(f.id); } }, icon('plus'), h('span', {}, 'Nouvelle fiche')));
+  // Mémoire presque pleine : alerte prioritaire, qui renvoie déjà vers la sauvegarde (pas de rappel en double)
+  const salert = renderStorageAlert(); if (salert) main.append(salert);
+  const bhint = salert ? null : renderBackupHint(); if (bhint) main.append(bhint);
+  const ihint = renderInstallHint(); if (ihint) main.append(ihint);
   if (!arr.length) {
     main.append(h('div', { class: 'empty' },
       h('img', { src: 'icons/logo.png', alt: '' }),
@@ -1382,6 +1786,184 @@ function renderFichesPage() {
   }
   main.append(list);
   draw();
+}
+
+/* ---------- Sauvegarde / restauration (Paramètres › Sauvegarde) ----------
+   Un fichier JSON : { format: 'ba-saisie-sauvegarde', version: 1, app, exportedAt (ISO),
+   fiches: [{ id, created, updated, data, customName? }], profile: {…ba.profile}, devices: [ …ba.devices ] }.
+   Il sert à changer de téléphone ou à tout retrouver après une perte. */
+const BACKUP_FORMAT = 'ba-saisie-sauvegarde', BACKUP_VERSION = 1;
+const BACKUP_KEY = 'ba.lastBackup';      // date (ms) de la dernière sauvegarde réussie
+const BACKUP_HINT_KEY = 'ba.backupHint'; // date (ms) du dernier « Plus tard » sur le rappel
+const BACKUP_EVERY_MS = 7 * 24 * 3600 * 1000;
+const frDay = (t) => new Date(t).toLocaleDateString('fr-FR');
+const nb = (n, one, many = one.replace(/(\S+)/g, '$1s')) => `${n} ${n > 1 ? many : one}`;
+const backupStatus = () => { const t = store.get(BACKUP_KEY, 0); return t ? `Dernière sauvegarde le ${frDay(t)}` : 'Jamais sauvegardé'; };
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+
+let backupFile = null; // préparé à l'ouverture de la page : le partage doit suivre directement l'appui
+async function buildBackup() {
+  await flushSave(); // le fichier reflète ce qui est réellement enregistré
+  const list = (await loadAllFiches()).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  const payload = { format: BACKUP_FORMAT, version: BACKUP_VERSION, app: 'Fiche disconnecteur BA', exportedAt: new Date().toISOString(),
+    fiches: list, profile: store.get('ba.profile', {}), devices: store.get('ba.devices', []) };
+  return { file: new File([JSON.stringify(payload)], `Sauvegarde_fiches_BA_${today()}.json`, { type: 'application/json' }), count: list.length };
+}
+function backupDone() {
+  store.set(BACKUP_KEY, Date.now());
+  const el = $('#backupStatus'); if (el) el.textContent = backupStatus();
+}
+function downloadBackup() {
+  const url = URL.createObjectURL(backupFile);
+  const a = h('a', { href: url, download: backupFile.name }); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  backupDone(); toast('Sauvegarde téléchargée.');
+}
+async function shareBackup() {
+  try { await navigator.share({ files: [backupFile], title: backupFile.name, text: 'Sauvegarde des fiches disconnecteur BA' }); backupDone(); toast('Sauvegarde envoyée.'); }
+  catch (e) { if (e.name !== 'AbortError') { toast('Partage impossible, téléchargement du fichier.'); downloadBackup(); } }
+}
+
+// Lit et vérifie un fichier de sauvegarde ; lève une Error au message lisible, sans rien modifier
+function parseBackup(text) {
+  const bad = 'Ce fichier n’est pas une sauvegarde de fiches BA.', broken = 'Sauvegarde endommagée : rien n’a été importé.';
+  let o; try { o = JSON.parse(text); } catch (e) { throw new Error(bad); }
+  if (!isObj(o) || o.format !== BACKUP_FORMAT) throw new Error(bad);
+  if (!Number.isInteger(o.version) || o.version < 1) throw new Error(broken);
+  if (o.version > BACKUP_VERSION) throw new Error('Sauvegarde faite avec une version plus récente de l’application : mettez l’application à jour puis réessayez.');
+  if (!Array.isArray(o.fiches) || (o.devices != null && !Array.isArray(o.devices)) || (o.profile != null && !isObj(o.profile))) throw new Error(broken);
+  const list = [], seen = new Set();
+  for (const f of o.fiches) {
+    if (!isObj(f) || typeof f.id !== 'string' || !f.id || !isObj(f.data)) throw new Error(broken);
+    if (seen.has(f.id)) continue; seen.add(f.id);
+    const created = Number(f.created) || Date.now();
+    const g = { id: f.id, created, updated: Number(f.updated) || created, data: f.data };
+    if (typeof f.customName === 'string' && f.customName) g.customName = f.customName;
+    list.push(g);
+  }
+  const devs = [];
+  for (const v of o.devices || []) {
+    if (!isObj(v)) throw new Error(broken);
+    const d = deviceFields(v);
+    if ((!d.appMarque && !d.appType && !d.appSerie) || devs.some((x) => sameDevice(x, d))) continue;
+    devs.push({ id: typeof v.id === 'string' && v.id ? v.id : uid(), used: Number(v.used) || 0, ...d });
+  }
+  const profile = {};
+  for (const [k, v] of Object.entries(o.profile || {})) if (typeof v === 'string' && v) profile[k] = v;
+  return { fiches: list, devices: devs, profile, exportedAt: Date.parse(o.exportedAt) || 0 };
+}
+
+// Écrit la sauvegarde : 'merge' (ajoute / met à jour si plus récente) ou 'replace' (remplace tout)
+async function applyBackup(b, mode) {
+  await flushSave();
+  let list = b.fiches, added = 0, updated = 0;
+  if (mode === 'merge') {
+    const map = {}; (await loadAllFiches()).forEach((f) => { map[f.id] = f; });
+    for (const f of b.fiches) {
+      const old = map[f.id];
+      if (!old) { map[f.id] = f; added++; } else if ((f.updated || 0) > (old.updated || 0)) { map[f.id] = f; updated++; }
+    }
+    list = Object.values(map);
+  }
+  if (!(await replaceAllFiches(list))) return; // échec (message déjà affiché) : rien n'a changé
+  let devs = b.devices, profile = b.profile;
+  if (mode === 'merge') {
+    devs = devices.slice();
+    for (const v of b.devices) if (!devs.some((x) => sameDevice(x, v))) devs.push(devs.some((x) => x.id === v.id) ? { ...v, id: uid() } : v);
+    const mine = store.get('ba.profile', {});
+    if (Object.keys(mine).length) profile = mine; // on garde ses propres infos
+  }
+  devices = devs; store.set('ba.devices', devices); store.set('ba.profile', profile);
+  current = (current && fiches[current.id]) || Object.values(fiches).sort((x, y) => y.updated - x.updated)[0] || newFiche();
+  rememberCurrent();
+  renderPage();
+  toast(mode === 'replace' ? nb(list.length, 'fiche importée')
+    : added || updated ? [added && nb(added, 'fiche ajoutée'), updated && nb(updated, 'fiche mise à jour', 'fiches mises à jour')].filter(Boolean).join(', ')
+    : 'Aucune fiche nouvelle : tout était déjà sur ce téléphone.');
+}
+
+function openBackupDialog(b, fileName) {
+  let dlg = $('#dlgBackup');
+  if (!dlg) {
+    dlg = h('dialog', { id: 'dlgBackup', 'aria-labelledby': 'backupDlgTitle' });
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    document.body.append(dlg);
+  }
+  let added = 0, newer = 0;
+  b.fiches.forEach((f) => { const old = fiches[f.id]; if (!old) added++; else if ((f.updated || 0) > (old.updated || 0)) newer++; });
+  const n = Object.keys(fiches).length;
+  const go = (mode) => {
+    if (mode === 'replace' && !confirm(`Les données actuelles de ce téléphone (${nb(n, 'fiche')}, appareils de contrôle, vos informations) vont être effacées et remplacées par la sauvegarde.\n\nContinuer ?`)) return;
+    dlg.close(); applyBackup(b, mode);
+  };
+  const help = (txt) => h('p', { class: 'bk-help' }, txt);
+  dlg.replaceChildren(h('div', { class: 'sheet' },
+    h('h3', { id: 'backupDlgTitle' }, 'Restaurer cette sauvegarde ?'),
+    h('p', { class: 'fname' }, fileName),
+    h('p', {}, (b.exportedAt ? `Faite le ${frDay(b.exportedAt)} : ` : 'Contenu : ')
+      + `${nb(b.fiches.length, 'fiche')}, ${nb(b.devices.length, 'appareil')}, vos informations : ${Object.keys(b.profile).length ? 'oui' : 'non'}.`),
+    h('div', { class: 'stack' },
+      h('button', { type: 'button', class: 'btn primary', onclick: () => go('merge') }, 'Fusionner avec mes fiches'),
+      help(`Ajoute ${nb(added, 'fiche absente', 'fiches absentes')} et met à jour ${nb(newer, 'fiche plus récente', 'fiches plus récentes')} dans la sauvegarde. Rien n’est supprimé.`),
+      h('button', { type: 'button', class: 'btn danger', onclick: () => go('replace') }, 'Remplacer tout'),
+      help('Efface les fiches, appareils et informations actuels de ce téléphone.'),
+      h('button', { type: 'button', class: 'btn small', onclick: () => dlg.close() }, 'Annuler'))));
+  dlg.showModal();
+}
+async function importBackup(file) {
+  const err = $('#backupError'); err.hidden = true;
+  try {
+    if (file.size > 300 * 1024 * 1024) throw new Error('Fichier trop volumineux pour une sauvegarde de fiches BA.');
+    openBackupDialog(parseBackup(await file.text()), file.name);
+  } catch (e) { err.textContent = e.message; err.hidden = false; }
+}
+
+function renderBackupPage() {
+  backupFile = null;
+  const exportBox = h('div', { class: 'bk-actions' }, h('p', { class: 'pdf-wait' }, 'Préparation de la sauvegarde…'));
+  const input = h('input', { type: 'file', accept: '.json,application/json', hidden: true,
+    onchange: (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) importBackup(f); } });
+  $('#form').replaceChildren(
+    backButton('Paramètres', () => goSettings('')),
+    h('section', { class: 'card' },
+      h('div', { class: 'card-head' }, h('h2', {}, 'Sauvegarder mes données')),
+      h('p', { class: 'card-intro' }, 'Ce fichier vous permet de changer de téléphone ou de retrouver vos fiches après une perte. Il contient des données personnelles (noms et téléphones des propriétaires, signatures) : gardez-le en lieu sûr.'),
+      h('p', { class: 'bk-status', id: 'backupStatus' }, backupStatus()),
+      exportBox),
+    h('section', { class: 'card' },
+      h('div', { class: 'card-head' }, h('h2', {}, 'Restaurer une sauvegarde')),
+      h('p', { class: 'card-intro' }, 'Choisissez un fichier de sauvegarde (.json) : vous pourrez le fusionner avec vos fiches ou tout remplacer.'),
+      h('div', { class: 'bk-actions' },
+        h('button', { type: 'button', class: 'btn', onclick: () => input.click() }, icon('upload'), 'Choisir un fichier'), input,
+        h('div', { class: 'warn', id: 'backupError', role: 'alert', hidden: true }))));
+  buildBackup().then(({ file, count }) => {
+    if (!exportBox.isConnected) return; // page quittée entre-temps
+    backupFile = file;
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    const size = file.size < 1024 * 1024 ? Math.max(1, Math.round(file.size / 1024)) + ' Ko' : (file.size / 1048576).toFixed(1).replace('.', ',') + ' Mo';
+    exportBox.replaceChildren(...[
+      h('p', { class: 'ofile' }, `${file.name} · ${nb(count, 'fiche')} · ${size}`),
+      canShare && h('button', { type: 'button', class: 'btn primary', onclick: shareBackup }, icon('share'), 'Partager / envoyer la sauvegarde'),
+      h('button', { type: 'button', class: canShare ? 'btn' : 'btn primary', onclick: downloadBackup }, icon('download'), 'Télécharger le fichier')].filter(Boolean));
+  }).catch((e) => {
+    console.error('Sauvegarde', e);
+    if (exportBox.isConnected) exportBox.replaceChildren(h('div', { class: 'warn' }, 'Impossible de préparer la sauvegarde : ' + e.message));
+  });
+}
+
+// Rappel en tête de « Mes fiches » : rien depuis 7 jours (ou jamais, à partir de 3 fiches)
+function renderBackupHint() {
+  const n = Object.keys(fiches).length, now = Date.now(), last = store.get(BACKUP_KEY, 0), snooze = store.get(BACKUP_HINT_KEY, 0);
+  if (!n || (snooze && now - snooze < BACKUP_EVERY_MS) || (last ? now - last <= BACKUP_EVERY_MS : n < 3)) return null;
+  return h('aside', { class: 'ihint bhint', id: 'backupHint', 'aria-label': 'Sauvegarde des fiches' },
+    h('span', { class: 'ihint-ic' }, icon('archive')),
+    h('div', { class: 'ihint-body' },
+      h('b', {}, 'Pensez à sauvegarder vos fiches'),
+      h('p', {}, last ? `Dernière sauvegarde il y a ${nb(Math.floor((now - last) / 86400000), 'jour')}.` : `Vos ${n} fiches ne sont enregistrées que sur ce téléphone.`,
+        ' Un fichier de sauvegarde permet de les retrouver en cas de perte ou de changement de téléphone.'),
+      h('div', { class: 'ihint-actions' },
+        h('button', { type: 'button', class: 'btn primary', onclick: () => { activeTab = 'settings'; goSettings('backup'); } }, icon('archive'), 'Sauvegarder'),
+        h('button', { type: 'button', class: 'btn', onclick: () => { store.set(BACKUP_HINT_KEY, Date.now()); const c = $('#backupHint'); if (c) c.remove(); } }, 'Plus tard'))));
 }
 
 /* ---------- Génération et export du PDF ---------- */
@@ -1442,7 +2024,7 @@ $('#btnSaveQuit').addEventListener('click', async () => {
   const name = await askFicheName(current, 'Enregistrer et quitter');
   if (name == null) return; // annulé : on reste sur la saisie
   applyFicheName(current, name);
-  clearTimeout(saveTimer); current.updated = Date.now(); fiches[current.id] = current; persist();
+  savePending = current; flushSave();
   switchTab('fiches'); toast('Fiche enregistrée.');
 });
 document.querySelectorAll('dialog').forEach((dl) => dl.addEventListener('click', (e) => { if (e.target === dl) dl.close(); }));
@@ -1452,9 +2034,13 @@ const syncOnline = () => document.body.classList.toggle('is-offline', !navigator
 addEventListener('online', syncOnline); addEventListener('offline', syncOnline); syncOnline();
 let rw; addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => sigSetups.forEach((f) => f()), 200); });
 
-const lastId = store.get('ba.current', null);
-current = fiches[lastId] || Object.values(fiches).sort((a, b) => b.updated - a.updated)[0] || newFiche();
-enterFiche();
+// Affichage seulement une fois les fiches chargées (IndexedDB est asynchrone)
+initFiches().then(() => {
+  const lastId = store.get('ba.current', null);
+  current = fiches[lastId] || Object.values(fiches).sort((a, b) => b.updated - a.updated)[0] || newFiche();
+  rememberCurrent(); enterFiche();
+  storageWatch(true); // alerte « mémoire presque pleine », une fois par session
+});
 
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
